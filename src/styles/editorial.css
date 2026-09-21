@@ -196,6 +196,19 @@ html.is-export .present-chrome {
   display: none;
 }
 
+.export-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--papel);
+  color: var(--tinta);
+  border-bottom: var(--regla) solid var(--filete);
+}
+
 html.is-presenting .pie,
 html.is-presenting .masthead,
 html.is-presenting .nav-sitio {

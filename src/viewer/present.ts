@@ -108,12 +108,14 @@ function isTypingTarget(t: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
 }
 
-function dumpMeasures(slug: string, measures: Record<string, Size>): void {
-  void fetch('/__prezi/dump', {
+function dumpMeasures(slug: string, measures: Record<string, Size>): Promise<void> {
+  return fetch('/__prezi/dump', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ slug, measures }),
-  }).catch(() => {});
+  }).then((r) => {
+    if (!r.ok) throw new Error('dump measures falló');
+  });
 }
 
 export async function bootPresenter(boot: PresenterBoot): Promise<void> {
@@ -266,7 +268,41 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
   syncActive();
   syncChrome();
   worldEl.classList.remove('is-pending');
-  dumpMeasures(boot.slug, measures);
+  const dumped = dumpMeasures(boot.slug, measures);
+
+  if (exp === 'video' || exp === 'smoke') {
+    try {
+      await dumped;
+      const { runCapture } = await import('./capture.ts');
+      await runCapture({
+        slug: boot.slug,
+        path,
+        root: boot.root,
+        holdMs: ir.video.hold_ms,
+        defaultDurationMs: defaultMs,
+        layout,
+        worldEl,
+        viewportEl,
+        smokeOnly: exp === 'smoke',
+        setActive: (id: string) => {
+          for (const el of worldEl.querySelectorAll('.frame.is-active')) {
+            el.classList.remove('is-active');
+          }
+          const sel = '.frame[data-id="' + CSS.escape(id) + '"]';
+          worldEl.querySelector(sel)?.classList.add('is-active');
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      const el = document.createElement('div');
+      el.className = 'export-progress';
+      el.textContent = err instanceof Error ? err.message : String(err);
+      document.body.appendChild(el);
+    }
+    return;
+  }
+
+  void dumped.catch(() => {});
 
   document.querySelector('.present-chrome')?.addEventListener('click', (ev) => {
     const t = ev.target;

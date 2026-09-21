@@ -7,7 +7,7 @@ const BODY_LIMIT = 2_000_000;
 
 type Next = (err?: unknown) => void;
 
-function isSafeSlug(slug: string): boolean {
+export function isSafeSlug(slug: string): boolean {
   return SLUG_RE.test(slug);
 }
 

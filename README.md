@@ -34,6 +34,7 @@ bash ~/work/projects/prezi-slides/run.sh          # rsync + astro dev --host 0.0
 bash ~/work/projects/prezi-slides/run.sh build
 bash ~/work/projects/prezi-slides/run.sh preview  # sirve $ROOT/dist
 bash ~/work/projects/prezi-slides/run.sh validate [slug]
+bash ~/work/projects/prezi-slides/run.sh video [--smoke] [slug]
 bash ~/work/projects/prezi-slides/run.sh test
 bash ~/work/projects/prezi-slides/run.sh sync
 ```
@@ -49,6 +50,39 @@ En el navegador de la tablet: `http://<IP-wlan0>:4322`. IP:
 `ifconfig wlan0` o `ip -4 addr`. El proceso debe seguir vivo en Termux.
 
 Rutas v1: `/` (índice), `/d/<slug>` (presentador), `/acerca`.
+
+## Vídeo (`run.sh video`)
+
+Flythrough MP4 del **mismo DOM** del presentador (html-to-image en Chrome +
+ffmpeg `libx264`). No hay estimador: hace falta `measures.json` del visor.
+
+```bash
+bash ~/work/projects/prezi-slides/run.sh video --smoke golden-tiny
+bash ~/work/projects/prezi-slides/run.sh video golden-tiny
+```
+
+**Dejar Chrome en primer plano** hasta que el CLI imprima la ruta del MP4.
+Android pausa `toPng` si la pestaña queda en segundo plano.
+
+Salida (en ROOT, `$HOME/.node-projects/prezi-slides/output/`):
+
+- `output/<slug>/smoke.png` — encuadre del paso 0 (`--smoke` termina aquí)
+- `output/<slug>.measures.json` — cajas del visor (obligatorio)
+- `output/<slug>.mp4` — 1280×800, 30 fps, hold + vuelos
+
+El sidecar escucha `PREZI_VIDEO_BIND` (default **`127.0.0.1`**) y
+`PREZI_VIDEO_PORT` (4322; si ocupado, 4323). Siempre imprime
+`http://127.0.0.1:$PORT/d/<slug>?export=video` (o `export=smoke`) y abre esa
+URL con `termux-open-url`. **Solo si** el bind es `0.0.0.0` o `::` imprime
+también `http://<wlan0>:$PORT/…`. Si Chrome no trata Termux como localhost:
+
+```bash
+PREZI_VIDEO_BIND=0.0.0.0 bash ~/work/projects/prezi-slides/run.sh video golden-tiny
+```
+
+Timeout 10 min (`PREZI_VIDEO_TIMEOUT_MS`). Los PNG de hold se duplican en
+disco bajo `output/<slug>-frames/` (ext4 ROOT; se borran tras el encode).
+Disco peor caso ~0,5 GiB temporales en un deck grande.
 
 ## Bucle rsync (dev)
 
