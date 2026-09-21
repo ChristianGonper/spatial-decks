@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bash ~/work/projects/prezi-slides/run.sh dev|build|preview|sync
+# bash ~/work/projects/prezi-slides/run.sh dev|build|preview|sync|validate|video|test
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${HOME}/.node-projects/prezi-slides"

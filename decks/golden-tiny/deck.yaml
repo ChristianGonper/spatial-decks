@@ -1,0 +1,15 @@
+slug: golden-tiny
+title: Golden tiny
+lang: es
+theme: editorial
+root: root
+camera:
+  duration_ms: 1000
+video:
+  hold_ms: 3000
+path:
+  - id: root
+  - id: hoja-a
+  - id: root
+  - id: hoja-b
+    duration_ms: 800

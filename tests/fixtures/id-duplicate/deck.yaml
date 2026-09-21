@@ -1,0 +1,7 @@
+slug: id-duplicate
+title: ID duplicado
+lang: es
+theme: editorial
+root: foo
+path:
+  - foo

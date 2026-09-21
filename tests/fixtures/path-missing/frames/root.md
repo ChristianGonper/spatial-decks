@@ -1,0 +1,5 @@
+---
+id: root
+---
+
+# Path huérfano

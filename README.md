@@ -33,8 +33,15 @@ bash ~/work/projects/prezi-slides/scripts/termux-setup.sh
 bash ~/work/projects/prezi-slides/run.sh          # rsync + astro dev --host 0.0.0.0
 bash ~/work/projects/prezi-slides/run.sh build
 bash ~/work/projects/prezi-slides/run.sh preview  # sirve $ROOT/dist
+bash ~/work/projects/prezi-slides/run.sh validate [slug]
+bash ~/work/projects/prezi-slides/run.sh test
 bash ~/work/projects/prezi-slides/run.sh sync
 ```
+
+`validate` (Ajv2020 + chequeos semánticos) recorre `decks/*/deck.yaml`.
+El schema está en `schema/deck.schema.json`. Fixture de prueba:
+`decks/golden-tiny/`.
+
 
 `run.sh preview` sirve `$ROOT/dist`, no un `dist/` del checkout git.
 

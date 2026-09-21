@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prezi-slides.dev/schema/deck.schema.json",
+  "$comment": "version 1",
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "Geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number", "minimum": 0 },
+        "height": { "type": "number", "minimum": 0 }
+      }
+    },
+    "PathStep": {
+      "oneOf": [
+        { "$ref": "#/$defs/Id" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": { "$ref": "#/$defs/Id" },
+            "duration_ms": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "FrameFrontmatter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": { "$ref": "#/$defs/Id" },
+        "layout": { "type": "string", "enum": ["grid", "row", "column"] },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Id" }
+        },
+        "geometry": { "$ref": "#/$defs/Geometry" }
+      }
+    },
+    "DeckManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "title", "root", "path"],
+      "properties": {
+        "slug": { "$ref": "#/$defs/Id" },
+        "title": { "type": "string", "minLength": 1 },
+        "lang": { "type": "string", "enum": ["es", "en"] },
+        "theme": { "const": "editorial" },
+        "root": { "$ref": "#/$defs/Id" },
+        "camera": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "duration_ms": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "video": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hold_ms": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "path": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PathStep" }
+        }
+      }
+    }
+  }
+}

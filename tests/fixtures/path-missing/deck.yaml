@@ -1,0 +1,8 @@
+slug: path-missing
+title: Path missing
+lang: es
+theme: editorial
+root: root
+path:
+  - id: root
+  - id: no-existe
