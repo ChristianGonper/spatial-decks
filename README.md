@@ -73,7 +73,7 @@ Cuando quieras el enlace para compañeros:
 
 Hasta entonces, `docs/` ya viaja en el git: quien tenga acceso al repo puede servir esa carpeta con cualquier HTTP estático.
 
-El detalle de Termux (FUSE, bucle rsync, `PREZI_VIDEO_BIND`, qué rechaza el validador) está en [`AGENTS.md`](AGENTS.md). Ahí también el contrato para que un agente genere o edite un deck.
+El detalle de Termux (FUSE, bucle rsync, `PREZI_VIDEO_BIND`, Pages) está en [`GUIA.md`](GUIA.md). El contrato corto al entrar al repo: [`AGENTS.md`](AGENTS.md).
 
 ## Qué no es (aún)
 
@@ -83,4 +83,6 @@ No hay editor visual, ni arrastrar frames, ni rotación, ni path con ramas. No h
 
 - [`PRD.md`](PRD.md) — producto y alcance
 - [`SDD.md`](SDD.md) — diseño (layout, cámara, captura de vídeo)
-- [`AGENTS.md`](AGENTS.md) — schema, formato en disco, comandos, entorno Termux
+- [`AGENTS.md`](AGENTS.md) — contrato de entrada para un agente
+- [`GUIA.md`](GUIA.md) — operación: Termux, rsync, vídeo, GitHub Pages
+- [`schema/deck.schema.json`](schema/deck.schema.json) — formato de deck y frames
