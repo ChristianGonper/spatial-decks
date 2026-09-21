@@ -1,20 +1,28 @@
 ---
+import '../styles/editorial.css';
+import Masthead from '../components/Masthead.astro';
+
 interface Props {
   title?: string;
+  lang?: string;
 }
-const { title } = Astro.props;
+const { title, lang = 'es' } = Astro.props;
 const docTitle = title ? `${title} — prezi-slides` : 'prezi-slides';
 ---
 <!doctype html>
-<html lang="es">
+<html lang={lang}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{docTitle}</title>
   </head>
   <body>
+    <Masthead />
     <main>
       <slot />
     </main>
+    <footer class="pie">
+      <p>prezi-slides</p>
+    </footer>
   </body>
 </html>

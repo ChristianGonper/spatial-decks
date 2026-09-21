@@ -1,16 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
+import DeckList from '../components/DeckList.astro';
+import { loadAllDecks } from '../engine/load';
+
+const decks = loadAllDecks();
 ---
 <Base>
-  <p>Índice</p>
+  <p class="kicker">Índice</p>
   <h1>prezi-slides</h1>
-  <p>
-    Visor espacial de decks. El índice listará los decks cuando exista
-    el cargador; de momento hay un presentador de prueba.
+  <p class="lede">
+    Visor espacial de decks: un árbol de frames en un lienzo 2D. La
+    fuente de verdad es texto en git.
   </p>
-  <p>
-    <a href="/d/golden-tiny">Abrir golden-tiny</a>
-    ·
-    <a href="/acerca">Acerca</a>
-  </p>
+  <DeckList decks={decks} />
 </Base>

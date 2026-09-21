@@ -1,0 +1,32 @@
+---
+import type { DeckIR } from '../engine/types';
+
+interface Props {
+  decks: DeckIR[];
+}
+const { decks } = Astro.props;
+---
+{
+  decks.length === 0 ? (
+    <p class="vacio">No hay decks.</p>
+  ) : (
+    <ul class="lista-decks">
+      {
+        decks.map((deck) => {
+          const n = Object.keys(deck.frames).length;
+          return (
+            <li>
+              <a class="tarjeta-deck" href={`/d/${deck.slug}`}>
+                <p class="kicker">{deck.slug}</p>
+                <h2>{deck.title}</h2>
+                <p class="datos-minimos">
+                  {`${n} ${n === 1 ? 'frame' : 'frames'} · ${deck.lang}`}
+                </p>
+              </a>
+            </li>
+          );
+        })
+      }
+    </ul>
+  )
+}
