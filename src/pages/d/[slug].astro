@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import Presenter from '../../components/Presenter.astro';
 import { loadDeck, loadAllDecks, deckDir } from '../../engine/load';
+import { preorderFrameIds } from '../../engine/layout';
 import { renderFrameHtml } from '../../engine/markdown';
 
 export function getStaticPaths() {
@@ -17,13 +18,16 @@ const boot = {
   path: ir.path,
   camera: ir.camera,
   video: ir.video,
-  frames: Object.values(ir.frames).map((f) => ({
-    id: f.id,
-    layout: f.layout,
-    children: f.children,
-    geometry: f.geometry ?? null,
-    html: renderFrameHtml(f.markdown, ir.slug),
-  })),
+  frames: preorderFrameIds(ir).map((id) => {
+    const f = ir.frames[id];
+    return {
+      id: f.id,
+      layout: f.layout,
+      children: f.children,
+      geometry: f.geometry ?? null,
+      html: renderFrameHtml(f.markdown, ir.slug),
+    };
+  }),
 };
 ---
 <Base title={ir.title} lang={ir.lang} presenting>

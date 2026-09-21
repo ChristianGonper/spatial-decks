@@ -231,6 +231,41 @@ function placeWorld(
   }
 }
 
+type FrameTree = { root: string; frames: Record<string, { children: string[] }> };
+
+/** Padres primero: siblings absolutos; el DOM pinta después = encima. */
+export function preorderFrameIds(tree: FrameTree): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const walk = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const f = tree.frames[id];
+    if (!f) return;
+    out.push(id);
+    for (const c of f.children) walk(c);
+  };
+  walk(tree.root);
+  for (const id of Object.keys(tree.frames)) walk(id);
+  return out;
+}
+
+export function frameDepths(tree: FrameTree): Record<string, number> {
+  const depth: Record<string, number> = {};
+  const walk = (id: string, d: number) => {
+    if (Object.prototype.hasOwnProperty.call(depth, id)) return;
+    depth[id] = d;
+    const f = tree.frames[id];
+    if (!f) return;
+    for (const c of f.children) walk(c, d + 1);
+  };
+  walk(tree.root, 0);
+  for (const id of Object.keys(tree.frames)) {
+    if (!Object.prototype.hasOwnProperty.call(depth, id)) walk(id, 0);
+  }
+  return depth;
+}
+
 export function layoutTree(ir: DeckIR, measures: Record<string, Size>): LayoutMap {
   const locals = new Map<string, Placed>();
   const sizes = new Map<string, Size>();
