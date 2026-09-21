@@ -1,148 +1,69 @@
 # prezi-slides
 
-Visor espacial de decks (lienzo 2D, cámara, texto en git). Sitio estático
-Astro (`output: 'static'`). Código y git en
-`~/work/projects/prezi-slides/`. npm y el proceso Node corren en una
-working copy rsync en ext4:
+Presentaciones **espaciales**: un mapa, no una pila de páginas.
 
-`$HOME/.node-projects/prezi-slides`
+En lugar de ir de la diapositiva 1 a la 2, el tema vive en un **lienzo 2D**. Los recuadros (frames) se agrupan en capítulos; presentar es mover la **cámara** (pan y zoom) por un **camino** que tú (o un agente) escribes en texto. Primero ves el mapa, luego un capítulo, luego una ficha, y vuelves a alejarte.
 
-`~/work` es FUSE: no admite symlinks y no ejecuta binarios. **Nunca**
-`npm install` en este directorio. No uses `cp -a` en lugar de rsync.
-Puerto **4322** (revista-laboratorio usa 4321).
+La fuente de verdad no es un `.pptx` ni un editor visual. Es un árbol de archivos en git: Markdown, un manifiesto YAML, y las imágenes al lado. El visor solo pinta. Si cambias un frame, el diff es ese archivo.
 
-## Contrato de agente
+Este repositorio es el visor, el validador y dos decks de ejemplo. Corre en local (pensando en una tablet con Termux y el navegador de Android).
 
-No hay MCP ni `add-frame`. El agente (o un humano) edita archivos y
-corre comandos. Superficie v1:
+## Qué estás viendo
 
-| Pieza | Dónde |
-| --- | --- |
-| Schema | `schema/deck.schema.json` (JSON Schema Draft 2020-12, `$comment: version 1`) |
-| Validador | `run.sh validate [slug]` — Ajv2020 + chequeos semánticos; exit ≠ 0 si falla |
-| Ejemplo | `decks/golden-tiny/` (fixture) y `decks/quasi-geostrofica/` (clase) |
-| `dev` | visor con HMR (vía rsync a ext4) |
-| `build` | HTML estático en `$ROOT/dist` |
-| `preview` | sirve ese `dist/` (no un `dist/` del checkout FUSE) |
-| `video` | MP4 flythrough del path (mismo DOM del presentador) |
+Un **frame** es un recuadro con título, texto, listas, código, fórmulas (LaTeX) e imágenes PNG/SVG. Un padre puede tener Markdown propio **y** hijos: al alejar la cámara lees el grupo; al acercarte, la ficha.
 
-### Formato en disco
+El **path** es la charla: una lista de ids. Puede visitar un padre (overview de un capítulo) y luego sus hojas. Siguiente / anterior recorren ese camino. Overview salta al root y vuelve.
+
+El **layout** no se arrastra a mano. El árbol declara `grid`, `row` o `column`; el motor coloca los recuadros. No hay rotación.
+
+Look: un tema editorial (papel crema, tinta, borgoña), no un dashboard oscuro.
 
 ```
 decks/<slug>/
-  deck.yaml
-  frames/<id>.md    # id ≡ basename, sin .md
-  assets/<file>.png|svg
+  deck.yaml          manifiesto: título, root, path
+  frames/<id>.md     un recuadro (el id es el nombre del archivo)
+  assets/            PNG o SVG locales
 ```
 
-`deck.yaml` exige `slug`, `title`, `root`, `path`. Opcional: `lang`
-(`es`\|`en`), `theme` (`editorial`), `camera.duration_ms` (default 1000),
-`video.hold_ms` (default 3000). Path: lista de ids o `{id, duration_ms}`.
-Frontmatter de frame: `id` obligatorio; `layout` ∈ `grid`\|`row`\|`column`
-(default `grid`); `children`; `geometry` parcial `{x,y,width,height}`.
+## Decks que trae el repo
 
-Markdown: títulos, texto, listas, código, imagen local
-`![alt](assets/foo.svg)`. Math: `$...$` y `$$...$$` (KaTeX en Node).
-Un YAML monolítico se rechaza. Árbol solo con `children` del padre.
+| Deck | Qué es |
+| --- | --- |
+| [`golden-tiny`](decks/golden-tiny/) | Mini-mapa de prueba (root + dos fichas). Sirve para validar y para el vídeo. |
+| [`quasi-geostrofica`](decks/quasi-geostrofica/) | Mini-clase (~15–20 min) de teoría cuasi-geostrófica: Rossby, geostrofía, QGPV, omega, ondas de Rossby QG. |
 
-`validate` recorre `decks/*/deck.yaml` (o un slug). Rechaza al menos:
-ID duplicado, path a un id inexistente, imagen referenciada ausente,
-`layout` que no es `grid|row|column`. También: `id` ≠ basename, asset
-remoto o fuera de `assets/<archivo>`, HTML crudo, fence sin cerrar, TeX
-inválido.
+En el visor: `/` es el índice, `/d/<slug>` el presentador, `/acerca` una nota corta.
 
-## Primera vez
+## Uso (humano)
 
-Node 24 de Termux y `rsync` (paquete `rsync` en termux-main, no rclone):
+Hace falta Node 24 y `rsync`. En Termux el git vive en almacenamiento compartido (FUSE): **no** ejecutes `npm install` dentro del clone. El setup copia el árbol a `$HOME/.node-projects/prezi-slides` y ahí corre Node.
 
 ```bash
-pkg install rsync
-bash ~/work/projects/prezi-slides/scripts/termux-setup.sh
+pkg install rsync          # Termux; en un escritorio, rsync del sistema
+bash scripts/termux-setup.sh
+bash run.sh                # visor de desarrollo, puerto 4322
 ```
 
-`termux-setup.sh` instala `rsync` si falta, rsync del git → ROOT, y
-`npm install` **en ROOT**. El lockfile se copia de vuelta al git.
+En el navegador: `http://127.0.0.1:4322` o, desde la tablet hacia Termux, `http://<IP>:4322`.
 
-## Uso
+| Comando | Efecto |
+| --- | --- |
+| `bash run.sh` | Desarrollo (recarga). Edita siempre los archivos del **git**, no la copia en `$HOME`. |
+| `bash run.sh build` | HTML estático del presentador. |
+| `bash run.sh preview` | Sirve ese build (hace falta HTTP; no abras `file://`). |
+| `bash run.sh validate` | Comprueba los decks. |
+| `bash run.sh video [slug]` | MP4 corto del path (cámara + holds). Chrome en **primer plano** hasta que termine. |
 
-Editar **siempre** el git en `~/work`. No editar
-`$HOME/.node-projects/prezi-slides/src` (el bucle rsync lo pisa).
+Controles en el presentador: Anterior, Siguiente, Overview. Teclado: flechas, espacio, `j`/`k`, `Esc`/`o`.
 
-```bash
-bash ~/work/projects/prezi-slides/scripts/termux-setup.sh
-bash ~/work/projects/prezi-slides/run.sh          # rsync + astro dev --host 0.0.0.0
-bash ~/work/projects/prezi-slides/run.sh build
-bash ~/work/projects/prezi-slides/run.sh preview  # sirve $ROOT/dist
-bash ~/work/projects/prezi-slides/run.sh validate [slug]
-bash ~/work/projects/prezi-slides/run.sh video [--smoke] [slug]
-bash ~/work/projects/prezi-slides/run.sh test
-bash ~/work/projects/prezi-slides/run.sh sync
-```
+El detalle de Termux (FUSE, bucle rsync, `PREZI_VIDEO_BIND`, qué rechaza el validador) está en [`AGENTS.md`](AGENTS.md). Ahí también el contrato para que un agente genere o edite un deck.
 
-En el navegador de la tablet: `http://<IP-wlan0>:4322`. IP:
-`ifconfig wlan0` o `ip -4 addr`. El proceso debe seguir vivo en Termux.
+## Qué no es (aún)
 
-Rutas v1: `/` (índice, `loadAllDecks()`), `/d/<slug>` (presentador),
-`/acerca`. El índice lista `golden-tiny` y `quasi-geostrofica`.
+No hay editor visual, ni arrastrar frames, ni rotación, ni path con ramas. No hay PDF. El vídeo no es la charla hablada: es un flythrough de unos minutos. No hay cuentas ni nube: es un sitio estático local.
 
-## Preview estático
+## Documentación
 
-`run.sh build` escribe el presentador en `$ROOT/dist` (Astro static).
-`run.sh preview` sirve **ese** `dist/`, no un directorio del checkout
-git. No es `file://`: hace falta HTTP para assets y KaTeX. Tras un
-cambio de deck, vuelve a `build` antes de `preview`.
-
-## Vídeo (`run.sh video`)
-
-Flythrough MP4 del **mismo DOM** del presentador (html-to-image en Chrome +
-ffmpeg `libx264`). No hay estimador: hace falta `measures.json` del visor.
-
-```bash
-bash ~/work/projects/prezi-slides/run.sh video --smoke golden-tiny
-bash ~/work/projects/prezi-slides/run.sh video golden-tiny
-bash ~/work/projects/prezi-slides/run.sh video quasi-geostrofica
-```
-
-**Dejar Chrome en primer plano** hasta que el CLI imprima la ruta del MP4.
-Android pausa `toPng` si la pestaña queda en segundo plano. Si Chrome no
-POST a `/__prezi/done`, **no hay MP4**: no se fabrica un archivo a mano.
-
-Salida (en ROOT, `$HOME/.node-projects/prezi-slides/output/`):
-
-- `output/<slug>/smoke.png` — encuadre del paso 0 (`--smoke` termina aquí)
-- `output/<slug>.measures.json` — cajas del visor (obligatorio)
-- `output/<slug>.mp4` — 1280×800, 30 fps, hold + vuelos
-
-El sidecar escucha `PREZI_VIDEO_BIND` (default **`127.0.0.1`**) y
-`PREZI_VIDEO_PORT` (4322; si ocupado, 4323). Siempre imprime
-`http://127.0.0.1:$PORT/d/<slug>?export=video` (o `export=smoke`) y abre esa
-URL con `termux-open-url`. **Solo si** el bind es `0.0.0.0` o `::` imprime
-también `http://<wlan0>:$PORT/…`. Si Chrome no trata Termux como localhost:
-
-```bash
-PREZI_VIDEO_BIND=0.0.0.0 bash ~/work/projects/prezi-slides/run.sh video golden-tiny
-```
-
-Timeout 10 min (`PREZI_VIDEO_TIMEOUT_MS`). Los PNG de hold se duplican en
-disco bajo `output/<slug>-frames/` (ext4 ROOT; se borran tras el encode).
-Disco peor caso ~0,5 GiB temporales en un deck grande.
-
-## Bucle rsync (dev)
-
-FUSE no dispara inotify. En `run.sh dev` un bucle rsync 1 s (tick
-`--size-only`) hace que Vite en ext4 vea los saves. Si Chrome recarga
-solo cada segundo o Termux se pone a 100 % CPU:
-
-```bash
-PREZI_NO_RSYNC_LOOP=1 bash ~/work/projects/prezi-slides/run.sh
-```
-
-y relanzar `run.sh` tras cada tanda de edits. Un save del mismo tamaño
-de bytes no se verá hasta `run.sh sync` / restart.
-
-## Qué no hacer
-
-- `npm install` / `npm run` en el checkout FUSE
-- `pnpm`
-- `cp -a` en lugar de `scripts/rsync-to-root.sh`
-- crear `node_modules/` o `dist/` dentro del repo
+- [`PRD.md`](PRD.md) — producto y alcance
+- [`SDD.md`](SDD.md) — diseño (layout, cámara, captura de vídeo)
+- [`AGENTS.md`](AGENTS.md) — schema, formato en disco, comandos, entorno Termux
