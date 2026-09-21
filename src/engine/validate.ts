@@ -289,7 +289,7 @@ export function validate(ir: DeckIR): ValidationResult {
     }
   }
 
-  // overlap: solo con tallas geometry.width+height; el packer es PR 3.
+  // overlap AABB exige geometry.width+height en cada hermano y el packer; sin eso no se evalúa.
   debugLayout('validate', ir.slug, errors.length, warnings.length);
 
   return { ok: errors.length === 0, errors, warnings };
