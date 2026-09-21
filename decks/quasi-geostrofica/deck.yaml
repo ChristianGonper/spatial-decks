@@ -1,0 +1,32 @@
+slug: quasi-geostrofica
+title: Teoría cuasi-geostrófica
+lang: es
+theme: editorial
+root: root
+camera:
+  duration_ms: 1000
+video:
+  hold_ms: 3000
+path:
+  - id: root
+  - id: motivacion
+  - id: rossby
+  - id: por-que-no-ns
+  - id: escalas
+  - id: geostrofia
+  - id: equilibrio
+  - id: limites
+  - id: ageostrofia
+  - id: qgpv
+  - id: qgpv-def
+  - id: qgpv-partes
+  - id: conservacion
+  - id: omega
+  - id: omega-eq
+  - id: como-sube
+  - id: q-vector
+  - id: corolario
+  - id: ondas-rossby
+  - id: dispersion
+  - id: filtrado
+  - id: root
