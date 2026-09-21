@@ -1,5 +1,6 @@
 ---
 import type { DeckIR } from '../engine/types';
+import { withBase } from '../engine/public-path';
 
 interface Props {
   decks: DeckIR[];
@@ -16,7 +17,7 @@ const { decks } = Astro.props;
           const n = Object.keys(deck.frames).length;
           return (
             <li>
-              <a class="tarjeta-deck" href={`/d/${deck.slug}`}>
+              <a class="tarjeta-deck" href={withBase(`d/${deck.slug}/`)}>
                 <p class="kicker">{deck.slug}</p>
                 <h2>{deck.title}</h2>
                 <p class="datos-minimos">

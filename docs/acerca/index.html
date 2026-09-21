@@ -1,0 +1,14 @@
+<!DOCTYPE html><html lang="es"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Acerca — prezi-slides</title><link rel="stylesheet" href="/spatial-decks/_astro/acerca.CyhqOKRQ.css"></head> <body> <header class="masthead"> <p class="masthead-titulo">prezi-slides</p> </header> <nav class="nav-sitio" aria-label="Sitio"> <a href="/spatial-decks/">Índice</a> <span class="nav-sep" aria-hidden="true">·</span> <a href="/spatial-decks/acerca/">Acerca</a> </nav> <main>  <p class="kicker">El visor</p> <h1>Acerca</h1> <div class="prosa"> <p>
+prezi-slides es un visor local de presentaciones espaciales: un
+      árbol de frames en un lienzo 2D y una cámara que recorre un path.
+      La fuente de verdad es texto en git. La UI no escribe coordenadas.
+</p> <p>
+Contrato de agente: schema en
+<code>schema/deck.schema.json</code>, validador CLI y dos decks
+      de ejemplo. No hay MCP ni editor visual. Se editan archivos y se
+      corre <code>run.sh validate</code>.
+</p> <ul> <li><code>run.sh validate [slug]</code> — Ajv2020 + semántica</li> <li><code>run.sh dev</code> — visor en <code>:4322</code></li> <li><code>run.sh build</code> y <code>preview</code> — HTML estático</li> <li><code>run.sh video [slug]</code> — MP4; Chrome en primer plano</li> </ul> <p>
+Un tema editorial (papel crema, tinta, borgoña). Math con KaTeX en
+      el build. El índice sale de <code>loadAllDecks()</code>.
+</p> <p>
+Código: <code>~/work/projects/prezi-slides/</code> </p> </div>  </main> <footer class="pie"> <p>prezi-slides</p> </footer> </body></html>

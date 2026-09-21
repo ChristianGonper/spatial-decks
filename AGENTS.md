@@ -35,6 +35,9 @@ Cwd irrelevante si usas `bash ~/work/projects/prezi-slides/run.sh …`.
 | `run.sh video [--smoke] [slug]` | MP4 flythrough (mismo DOM del presentador) |
 | `run.sh test` | `node --test --experimental-strip-types` |
 | `run.sh sync` | un rsync git → ROOT sin arrancar el server |
+| `run.sh site` | `PREZI_SITE` + `PREZI_BASE` (default GitHub Pages `/spatial-decks`) → `$ROOT/dist` → git `docs/` + `.nojekyll` |
+
+`run.sh build` / `dev` **no** ponen `base`: el visor local sigue en `/`. Solo `site` usa el prefijo de Pages. No editar a mano los hashes de `docs/_astro/`. El rsync a ROOT excluye `docs/`.
 
 Tras cambiar un deck, `validate` y recargar el visor. Tras `preview`, hay que `build` otra vez.
 

@@ -53,8 +53,25 @@ En el navegador: `http://127.0.0.1:4322` o, desde la tablet hacia Termux, `http:
 | `bash run.sh preview` | Sirve ese build (hace falta HTTP; no abras `file://`). |
 | `bash run.sh validate` | Comprueba los decks. |
 | `bash run.sh video [slug]` | MP4 corto del path (cámara + holds). Chrome en **primer plano** hasta que termine. |
+| `bash run.sh site` | Regenera `docs/`: HTML estático con prefijo `/spatial-decks/` para GitHub Pages. |
 
 Controles en el presentador: Anterior, Siguiente, Overview. Teclado: flechas, espacio, `j`/`k`, `Esc`/`o`.
+
+## Prototipo en la web (GitHub Pages)
+
+El directorio [`docs/`](docs/) es el visor **compilado** (HTML, CSS, JS, figuras). No hace falta Node para mirarlo una vez publicado.
+
+Repo: [ChristianGonper/spatial-decks](https://github.com/ChristianGonper/spatial-decks). Hoy es **privado**. En el plan gratuito, GitHub Pages para una URL pública pide el repo **público** (o GitHub Pro si sigue privado).
+
+Cuando quieras el enlace para compañeros:
+
+1. `bash run.sh site` (si cambiaste decks o código) y commit de `docs/`.
+2. GitHub → Settings → Pages → Deploy from a branch → `main` / `/docs`.
+3. Si el repo es público, la URL será  
+   `https://ChristianGonper.github.io/spatial-decks/`  
+   Índice, `/d/golden-tiny/`, `/d/quasi-geostrofica/`.
+
+Hasta entonces, `docs/` ya viaja en el git: quien tenga acceso al repo puede servir esa carpeta con cualquier HTTP estático.
 
 El detalle de Termux (FUSE, bucle rsync, `PREZI_VIDEO_BIND`, qué rechaza el validador) está en [`AGENTS.md`](AGENTS.md). Ahí también el contrato para que un agente genere o edite un deck.
 

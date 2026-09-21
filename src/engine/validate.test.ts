@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { loadAllDecks, loadDeck } from './load.ts';
 import { scanMarkdown } from './math-extract.ts';
 import type { DeckIR } from './types.ts';
+import { rewriteAssetSrc } from './markdown.ts';
+import { withBase } from './public-path.ts';
 import { validate } from './validate.ts';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -59,6 +61,13 @@ function tinyIr(md: string, slug = 'x'): DeckIR {
     },
   };
 }
+
+describe('withBase / assets', () => {
+  it('rewriteAssetSrc usa BASE_URL (local = /)', () => {
+    assert.equal(withBase('deck-assets/x/a.svg'), '/deck-assets/x/a.svg');
+    assert.equal(rewriteAssetSrc('assets/punto.svg', 'golden-tiny'), '/deck-assets/golden-tiny/punto.svg');
+  });
+});
 
 describe('golden-tiny', () => {
   it('valida ok y loadAllDecks no incluye fixtures', () => {

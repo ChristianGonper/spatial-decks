@@ -4,7 +4,12 @@ import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dumpMiddleware } from '../video/dump.ts';
 
-const PREFIX = '/deck-assets/';
+function deckAssetsPrefix(base: string): string {
+  const b = base.endsWith('/') ? base : `${base}/`;
+  return `${b}deck-assets/`;
+}
+
+let assetsPrefix = '/deck-assets/';
 
 function decksRoot(): string {
   return resolve('decks');
@@ -40,16 +45,19 @@ export default function deckAssets(): AstroIntegration {
   return {
     name: 'deck-assets',
     hooks: {
+      'astro:config:done': ({ config }) => {
+        assetsPrefix = deckAssetsPrefix(config.base ?? '/');
+      },
       'astro:server:setup': ({ server }) => {
         server.middlewares.use(dumpMiddleware);
         server.middlewares.use((req, res, next) => {
           const raw = req.url ?? '';
           const pathname = raw.split('?')[0] ?? '';
-          if (req.method !== 'GET' || !pathname.startsWith(PREFIX)) {
+          if (req.method !== 'GET' || !pathname.startsWith(assetsPrefix)) {
             next();
             return;
           }
-          const rest = pathname.slice(PREFIX.length);
+          const rest = pathname.slice(assetsPrefix.length);
           const slash = rest.indexOf('/');
           if (slash <= 0) {
             res.statusCode = 404;

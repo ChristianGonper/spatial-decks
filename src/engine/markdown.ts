@@ -2,6 +2,7 @@ import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 import katex from 'katex';
 import { mathPlaceholder, protectMath } from './math-extract.ts';
+import { withBase } from './public-path.ts';
 
 const KATEX_OPTS = {
   throwOnError: true,
@@ -28,7 +29,7 @@ export function rewriteAssetSrc(src: string, slug: string): string {
   if (!/\.(png|svg)$/i.test(file)) {
     throw new Error(`asset-type: ${src}`);
   }
-  return `/deck-assets/${slug}/${file}`;
+  return withBase(`deck-assets/${slug}/${file}`);
 }
 
 function makeMd(): MarkdownIt {

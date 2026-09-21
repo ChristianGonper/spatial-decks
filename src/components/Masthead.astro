@@ -1,8 +1,11 @@
+---
+import { withBase } from '../engine/public-path';
+---
 <header class="masthead">
   <p class="masthead-titulo">prezi-slides</p>
 </header>
 <nav class="nav-sitio" aria-label="Sitio">
-  <a href="/">Índice</a>
+  <a href={withBase('')}>Índice</a>
   <span class="nav-sep" aria-hidden="true">·</span>
-  <a href="/acerca">Acerca</a>
+  <a href={withBase('acerca/')}>Acerca</a>
 </nav>

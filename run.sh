@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bash ~/work/projects/prezi-slides/run.sh dev|build|preview|sync|validate|video|test
+# bash ~/work/projects/prezi-slides/run.sh dev|build|preview|site|sync|validate|video|test
 set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${HOME}/.node-projects/prezi-slides"
@@ -19,6 +19,19 @@ export npm_config_cache="${HOME}/.npm"
 
 if [[ "$cmd" == "sync" ]]; then
   exit 0   # solo rsync-to-root
+fi
+
+if [[ "$cmd" == "site" ]]; then
+  export PREZI_SITE="${PREZI_SITE:-https://ChristianGonper.github.io}"
+  export PREZI_BASE="${PREZI_BASE:-/spatial-decks}"
+  npm run build
+  mkdir -p "$SRC/docs"
+  "${PREZI_RSYNC:-rsync}" -a --delete \
+    --exclude .git \
+    "$ROOT/dist/" "$SRC/docs/"
+  : > "$SRC/docs/.nojekyll"
+  echo "docs/ listo para GitHub Pages (${PREZI_SITE}${PREZI_BASE}/)" >&2
+  exit 0
 fi
 
 loop_pid=""

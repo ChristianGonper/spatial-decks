@@ -22,4 +22,5 @@ mkdir -p "$ROOT" "${HOME}/.cache/prezi-slides-vite"
   --exclude .gitignore \
   --exclude .rsync-loop.pid \
   --exclude output/ \
+  --exclude docs/ \
   "$SRC/" "$ROOT/"
