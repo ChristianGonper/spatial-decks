@@ -12,18 +12,14 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { networkInterfaces } from 'node:os';
 import { extname, join, relative, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
-import type { PathStep } from '../engine/types.ts';
 import { dumpMiddleware, isSafeSlug } from './dump.ts';
 
 const FRAME_BODY_LIMIT = 20_000_000;
-const EXPORT_FPS = 30;
 
 export type SidecarOpts = {
   root: string;
   distDir: string;
   slug: string;
-  holdMs: number;
-  flights: number[];
   smokeOnly: boolean;
   bind: string;
   port: number;
@@ -35,41 +31,6 @@ export type Sidecar = {
   close: () => Promise<void>;
   done: Promise<{ mp4?: string; smoke: string }>;
 };
-
-export function holdCopies(holdMs: number): number {
-  return Math.round((holdMs / 1000) * EXPORT_FPS);
-}
-
-export function flightFrameCounts(
-  path: PathStep[],
-  defaultDurationMs: number,
-): number[] {
-  const out: number[] = [];
-  for (let i = 1; i < path.length; i++) {
-    const ms = path[i].duration_ms ?? defaultDurationMs;
-    out.push(Math.round((ms / 1000) * EXPORT_FPS));
-  }
-  return out;
-}
-
-export function uniqueFrameTotal(flights: number[]): number {
-  return flights.length + 1 + flights.reduce((a, n) => a + n, 0);
-}
-
-function copiesForUnique(u: number, holdN: number, flights: number[]): number {
-  let cur = 0;
-  const holds = flights.length + 1;
-  for (let h = 0; h < holds; h++) {
-    if (u === cur) return holdN;
-    cur += 1;
-    if (h < flights.length) {
-      const nf = flights[h];
-      if (u < cur + nf) return 1;
-      cur += nf;
-    }
-  }
-  throw new Error('índice de frame fuera de timeline');
-}
 
 export function wlanIpv4(): string | null {
   const addrs = networkInterfaces()['wlan0'] ?? [];
@@ -177,25 +138,22 @@ function pngFromDataUrl(data: string): Buffer {
   throw new Error('no es PNG');
 }
 
-function pngFromDataUrlOrJson(raw: Buffer): Buffer {
-  const text = raw.toString('utf8').trim();
-  if (text.startsWith('{')) {
-    const parsed: unknown = JSON.parse(text);
-    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('json inválido');
-    }
-    const png = (parsed as { png?: unknown }).png;
-    if (typeof png !== 'string') throw new Error('png ausente');
-    return pngFromDataUrl(png);
+function parsePngJson(raw: Buffer): { png: string; index?: unknown; copies?: unknown } {
+  const parsed: unknown = JSON.parse(raw.toString('utf8'));
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('cuerpo inválido');
   }
-  return pngFromDataUrl(text);
+  const rec = parsed as { png?: unknown; index?: unknown; copies?: unknown };
+  if (typeof rec.png !== 'string') throw new Error('png ausente');
+  return { png: rec.png, index: rec.index, copies: rec.copies };
 }
 
-function writeHoldCopies(src: string, destDir: string, start: number, copies: number): number {
+/** Primera copia = frame_*; el hold se duplica con hardlink. */
+function writeCopies(png: Buffer, destDir: string, start: number, copies: number): number {
   if (copies <= 0) return start;
   let disk = start;
   const first = join(destDir, `frame_${String(disk).padStart(5, '0')}.png`);
-  if (src !== first) copyFileSync(src, first);
+  writeFileSync(first, png);
   disk += 1;
   for (let i = 1; i < copies; i++) {
     const dest = join(destDir, `frame_${String(disk).padStart(5, '0')}.png`);
@@ -261,8 +219,6 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
   const smokePath = join(smokeDir, 'smoke.png');
   const mp4Path = join(opts.root, 'output', `${opts.slug}.mp4`);
   const measuresPath = join(opts.root, 'output', `${opts.slug}.measures.json`);
-  const holdN = holdCopies(opts.holdMs);
-  const expectedUnique = uniqueFrameTotal(opts.flights);
 
   rmSync(framesDir, { recursive: true, force: true });
   mkdirSync(framesDir, { recursive: true });
@@ -271,8 +227,6 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
 
   let nextUnique = 0;
   let nextDisk = 1;
-  let gotDump = existsSync(measuresPath);
-  let gotSmoke = false;
   let finished = false;
 
   let resolveDone: (v: { mp4?: string; smoke: string }) => void;
@@ -284,23 +238,14 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
 
   const server = createServer((req, res) => {
     const pathname = (req.url ?? '').split('?')[0] ?? '';
-    if (req.method === 'POST' && pathname === '/__prezi/dump') {
-      const end = res.end.bind(res);
-      res.end = ((...args: Parameters<ServerResponse['end']>) => {
-        if (res.statusCode === 200) gotDump = true;
-        return end(...args);
-      }) as ServerResponse['end'];
-    }
     dumpMiddleware(req, res, () => {
       void (async () => {
         try {
           if (req.method === 'POST' && pathname === '/__prezi/smoke') {
-            const raw = await readBodyBuf(req, FRAME_BODY_LIMIT);
-            const ct = String(req.headers['content-type'] ?? '');
-            const png = ct.includes('image/png') ? raw : pngFromDataUrlOrJson(raw);
+            const rec = parsePngJson(await readBodyBuf(req, FRAME_BODY_LIMIT));
+            const png = pngFromDataUrl(rec.png);
             if (png.length === 0) throw new Error('smoke vacío');
             writeFileSync(smokePath, png);
-            gotSmoke = true;
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ ok: true }));
@@ -312,33 +257,22 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
               res.end('smokeOnly');
               return;
             }
-            const raw = await readBodyBuf(req, FRAME_BODY_LIMIT);
-            const parsed: unknown = JSON.parse(raw.toString('utf8'));
-            if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-              res.statusCode = 400;
-              res.end('cuerpo inválido');
-              return;
-            }
-            const rec = parsed as { index?: unknown; png?: unknown };
+            const rec = parsePngJson(await readBodyBuf(req, FRAME_BODY_LIMIT));
             if (typeof rec.index !== 'number' || rec.index !== nextUnique) {
               res.statusCode = 400;
               res.end('index inválido');
               return;
             }
-            if (typeof rec.png !== 'string') {
+            if (typeof rec.copies !== 'number' || rec.copies < 1 || rec.copies !== Math.floor(rec.copies)) {
               res.statusCode = 400;
-              res.end('png ausente');
+              res.end('copies inválido');
               return;
             }
             const png = pngFromDataUrl(rec.png);
-            const copies = copiesForUnique(rec.index, holdN, opts.flights);
-            const tmp = join(framesDir, `_snap_${String(rec.index).padStart(5, '0')}.png`);
-            writeFileSync(tmp, png);
             const from = nextDisk;
-            nextDisk = writeHoldCopies(tmp, framesDir, nextDisk, copies);
-            rmSync(tmp, { force: true });
+            nextDisk = writeCopies(png, framesDir, nextDisk, rec.copies);
             nextUnique += 1;
-            if (copies > 1) {
+            if (rec.copies > 1) {
               console.error(
                 `vídeo: hold unique=${rec.index} → frame_${String(from).padStart(5, '0')}–${String(nextDisk - 1).padStart(5, '0')}`,
               );
@@ -366,14 +300,13 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
                 // cuerpo vacío o no JSON
               }
             }
-            gotDump = gotDump || existsSync(measuresPath);
-            if (!gotDump) {
+            if (!existsSync(measuresPath)) {
               res.statusCode = 400;
               res.end('falta measures.json');
               rejectDone(new Error('falta measures.json (sin estimador)'));
               return;
             }
-            if (!gotSmoke || !existsSync(smokePath) || statSync(smokePath).size === 0) {
+            if (!existsSync(smokePath) || statSync(smokePath).size === 0) {
               res.statusCode = 400;
               res.end('falta smoke.png');
               rejectDone(new Error('falta smoke.png'));
@@ -387,12 +320,10 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
               resolveDone({ smoke: smokePath });
               return;
             }
-            if (nextUnique !== expectedUnique) {
+            if (nextUnique < 1) {
               res.statusCode = 400;
-              res.end('frames incompletos');
-              rejectDone(
-                new Error(`frames ${nextUnique} ≠ ${expectedUnique} (sin estimador)`),
-              );
+              res.end('falta frames');
+              rejectDone(new Error('falta frames (sin estimador)'));
               return;
             }
             await runFfmpeg(framesDir, mp4Path);
@@ -439,19 +370,12 @@ export async function startVideoSidecar(opts: SidecarOpts): Promise<Sidecar> {
     }
   }
 
-  // El dump real pasa por dumpMiddleware (cwd/output). Observamos el archivo.
-  const dumpPoll = setInterval(() => {
-    if (existsSync(measuresPath)) gotDump = true;
-  }, 250);
-  done.finally(() => clearInterval(dumpPoll)).catch(() => {});
-
   return {
     port,
     bind: opts.bind,
     done,
     close: () =>
       new Promise((res) => {
-        clearInterval(dumpPoll);
         server.close(() => res());
       }),
   };

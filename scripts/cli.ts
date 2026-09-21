@@ -3,13 +3,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { LoadError, loadAllDecks, loadDeck } from '../src/engine/load.ts';
 import { validate } from '../src/engine/validate.ts';
-import type { DeckIR, PathStep, ValidationResult } from '../src/engine/types.ts';
-import {
-  bindIsWildcard,
-  flightFrameCounts,
-  startVideoSidecar,
-  wlanIpv4,
-} from '../src/video/server.ts';
+import type { DeckIR, ValidationResult } from '../src/engine/types.ts';
+import { bindIsWildcard, startVideoSidecar, wlanIpv4 } from '../src/video/server.ts';
 
 function printResult(slug: string, result: ValidationResult): void {
   if (result.ok) {
@@ -130,10 +125,6 @@ function hasFfmpeg(): boolean {
   return r.status === 0;
 }
 
-function videoSteps(ir: DeckIR): PathStep[] {
-  return ir.path.length > 0 ? ir.path : [{ id: ir.root }];
-}
-
 async function runVideo(argv: string[]): Promise<number> {
   const { slug, smoke } = parseVideoArgs(argv);
   const dir = resolve('decks', slug);
@@ -170,13 +161,10 @@ async function runVideo(argv: string[]): Promise<number> {
   const bind = process.env.PREZI_VIDEO_BIND || '127.0.0.1';
   const preferred = Number(process.env.PREZI_VIDEO_PORT) || 4322;
   const timeoutMs = Number(process.env.PREZI_VIDEO_TIMEOUT_MS) || 600_000;
-  const steps = videoSteps(ir);
   const sidecar = await startVideoSidecar({
     root,
     distDir: join(root, 'dist'),
     slug: ir.slug,
-    holdMs: ir.video.hold_ms,
-    flights: flightFrameCounts(steps, ir.camera.duration_ms),
     smokeOnly: smoke,
     bind,
     port: preferred,

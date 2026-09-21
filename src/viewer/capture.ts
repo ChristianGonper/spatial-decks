@@ -15,7 +15,6 @@ export const EXPORT_FPS = 30;
 const VP = { width: EXPORT_WIDTH, height: EXPORT_HEIGHT };
 
 export type CaptureOpts = {
-  slug: string;
   path: PathStep[];
   root: string;
   holdMs: number;
@@ -27,7 +26,7 @@ export type CaptureOpts = {
   setActive: (id: string) => void;
 };
 
-function flightFrames(ms: number): number {
+function framesForMs(ms: number): number {
   return Math.round((ms / 1000) * EXPORT_FPS);
 }
 
@@ -85,24 +84,18 @@ export async function runCapture(opts: CaptureOpts): Promise<void> {
     worldEl.style.transform = worldTransform(cam, VP);
   }
 
-  async function postFrame(png: string): Promise<void> {
+  async function postFrame(png: string, copies: number): Promise<void> {
     const index = unique;
     unique += 1;
-    await postJson('/__prezi/frame', { index, png });
+    await postJson('/__prezi/frame', { index, png, copies });
   }
 
+  const holdN = Math.max(1, framesForMs(opts.holdMs));
   setProgress('export: hold 0');
   opts.setActive(steps[0].id);
   applyCamera(fitCamera(rectFor(layout, steps[0].id, root), VP));
   const png0 = await snap();
-
-  await fetch('/__prezi/smoke', {
-    method: 'POST',
-    headers: { 'Content-Type': 'image/png' },
-    body: await (await fetch(png0)).blob(),
-  }).then((r) => {
-    if (!r.ok) throw new Error('smoke → ' + r.status);
-  });
+  await postJson('/__prezi/smoke', { png: png0 });
 
   if (opts.smokeOnly) {
     setProgress('export: smoke listo');
@@ -110,21 +103,21 @@ export async function runCapture(opts: CaptureOpts): Promise<void> {
     return;
   }
 
-  await postFrame(png0);
+  await postFrame(png0, holdN);
 
   for (let i = 1; i < steps.length; i++) {
-    const nFlight = flightFrames(steps[i].duration_ms ?? opts.defaultDurationMs);
+    const nFlight = framesForMs(steps[i].duration_ms ?? opts.defaultDurationMs);
     const cam0 = fitCamera(rectFor(layout, steps[i - 1].id, root), VP);
     const cam1 = fitCamera(rectFor(layout, steps[i].id, root), VP);
     opts.setActive(steps[i].id);
     setProgress(`export: vuelo ${i - 1}→${i}`);
     for (let k = 1; k <= nFlight; k++) {
       applyCamera(lerpCam(cam0, cam1, easeInOutCubic(k / nFlight)));
-      await postFrame(await snap());
+      await postFrame(await snap(), 1);
     }
     applyCamera(cam1);
     setProgress(`export: hold ${i}`);
-    await postFrame(await snap());
+    await postFrame(await snap(), holdN);
   }
 
   setProgress('export: ffmpeg');

@@ -275,7 +275,6 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
       await dumped;
       const { runCapture } = await import('./capture.ts');
       await runCapture({
-        slug: boot.slug,
         path,
         root: boot.root,
         holdMs: ir.video.hold_ms,
