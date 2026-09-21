@@ -26,7 +26,7 @@ const { boot } = Astro.props;
 const bootJson = JSON.stringify(boot).replace(/</g, '\\u003c');
 ---
 <div class="viewport">
-  <div class="world" id="world">
+  <div class="world is-pending" id="world">
     {
       boot.frames.map((f) => (
         <article class="frame" data-id={f.id}>
@@ -43,12 +43,7 @@ const bootJson = JSON.stringify(boot).replace(/</g, '\\u003c');
 </nav>
 <script type="application/json" id="prezi-boot" set:html={bootJson}></script>
 <script>
+  import { bootPresenter } from '../viewer/present';
   const raw = document.getElementById('prezi-boot')?.textContent ?? '{}';
-  const boot = JSON.parse(raw);
-  for (const f of boot.frames ?? []) {
-    const el = document.querySelector(
-      '[data-frame-body][data-id="' + CSS.escape(f.id) + '"]',
-    );
-    if (el && typeof f.html === 'string') el.innerHTML = f.html;
-  }
+  bootPresenter(JSON.parse(raw));
 </script>

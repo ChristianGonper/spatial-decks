@@ -2,6 +2,7 @@ import type { AstroIntegration } from 'astro';
 import { createReadStream, existsSync, readdirSync, statSync, cpSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dumpMiddleware } from '../video/dump.ts';
 
 const PREFIX = '/deck-assets/';
 
@@ -40,6 +41,7 @@ export default function deckAssets(): AstroIntegration {
     name: 'deck-assets',
     hooks: {
       'astro:server:setup': ({ server }) => {
+        server.middlewares.use(dumpMiddleware);
         server.middlewares.use((req, res, next) => {
           const raw = req.url ?? '';
           const pathname = raw.split('?')[0] ?? '';
