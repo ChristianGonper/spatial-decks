@@ -4,11 +4,9 @@ import {
   FRAME_PAD_X,
   FRAME_PAD_Y,
   LayoutError,
-  frameDepths,
   layoutTree,
   packSiblings,
   PARENT_BODY_GAP,
-  preorderFrameIds,
 } from './layout.ts';
 import type { DeckIR, FrameIR, Geometry, Size } from './types.ts';
 
@@ -295,16 +293,5 @@ describe('layoutTree', () => {
     assert.equal(map.a.width, 50);
     const originX = map.root.x + FRAME_PAD_X;
     assert.equal(map.b.x - originX, 50 + 40);
-  });
-});
-
-describe('preorderFrameIds', () => {
-  it('padre antes que hijos (pintura debajo)', () => {
-    const ir = leavesGrid(2);
-    assert.deepEqual(preorderFrameIds(ir), ['root', 'c0', 'c1']);
-    const d = frameDepths(ir);
-    assert.equal(d.root, 0);
-    assert.equal(d.c0, 1);
-    assert.equal(d.c1, 1);
   });
 });

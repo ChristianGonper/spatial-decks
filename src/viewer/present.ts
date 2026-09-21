@@ -6,7 +6,7 @@ import {
   worldTransform,
   type Camera,
 } from '../engine/camera.ts';
-import { frameDepths, layoutTree } from '../engine/layout.ts';
+import { layoutTree } from '../engine/layout.ts';
 import type {
   DeckIR,
   FrameIR,
@@ -137,13 +137,13 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
   const session = await startMeasure(boot.frames);
   let measures = session.measures;
   let layout: LayoutMap = layoutTree(ir, measures);
-  applyBoxes(worldEl, boot.frames, layout, measures, frameDepths(ir));
+  applyBoxes(worldEl, boot.frames, layout, measures);
 
   const again = await session.remeasure();
   if (sizesDiffer(measures, again)) {
     measures = again;
     layout = layoutTree(ir, measures);
-    applyBoxes(worldEl, boot.frames, layout, measures, frameDepths(ir));
+    applyBoxes(worldEl, boot.frames, layout, measures);
   }
   session.dispose();
 
@@ -305,7 +305,6 @@ function applyBoxes(
   frames: BootFrame[],
   layout: LayoutMap,
   measures: Record<string, Size>,
-  depths: Record<string, number>,
 ): void {
   for (const f of frames) {
     const article = worldEl.querySelector(
@@ -319,7 +318,6 @@ function applyBoxes(
       article.style.width = r.width + 'px';
       article.style.height = r.height + 'px';
     }
-    article.style.zIndex = String(depths[f.id] ?? 0);
     const body = article.querySelector('[data-frame-body]');
     if (!(body instanceof HTMLElement)) continue;
     const m = measures[f.id];

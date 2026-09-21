@@ -2,8 +2,25 @@
 import Base from '../../layouts/Base.astro';
 import Presenter from '../../components/Presenter.astro';
 import { loadDeck, loadAllDecks, deckDir } from '../../engine/load';
-import { preorderFrameIds } from '../../engine/layout';
 import { renderFrameHtml } from '../../engine/markdown';
+import type { DeckIR } from '../../engine/types';
+
+/** Padres primero: el DOM pinta después = hijos encima del pane opaco. */
+function preorderFrameIds(ir: DeckIR): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const walk = (id: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    const f = ir.frames[id];
+    if (!f) return;
+    out.push(id);
+    for (const c of f.children) walk(c);
+  };
+  walk(ir.root);
+  for (const id of Object.keys(ir.frames)) walk(id);
+  return out;
+}
 
 export function getStaticPaths() {
   return loadAllDecks().map((d) => ({ params: { slug: d.slug } }));
