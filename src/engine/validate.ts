@@ -62,7 +62,10 @@ function classifyAsset(src: string): 'remote' | 'traversal' | 'type' | 'ok' {
   const parts = norm.split(/[/\\]/);
   if (parts.includes('..') || norm.startsWith('/') || src.startsWith('/')) return 'traversal';
   if (!norm.startsWith('assets/')) return 'type';
-  if (!/\.(png|svg)$/i.test(norm)) return 'type';
+  const file = norm.slice('assets/'.length);
+  // Un solo segmento: rewriteAssetSrc no acepta assets/<dir>/file.png
+  if (!file || file.includes('/') || file.includes('\\')) return 'type';
+  if (!/\.(png|svg)$/i.test(file)) return 'type';
   return 'ok';
 }
 

@@ -97,13 +97,13 @@ describe('markdown scan', () => {
   });
 
   it('math fuera de fences; $ dentro de ``` no cuenta', () => {
-    const scan = scanMarkdown(
-      'fuera $a+b$\n```\n$no$\n```\n$$c$$\n`code $x$ ok`\n',
-    );
+    const src = 'fuera $a+b$\n```\n$no$\n```\n$$c$$\n`code $x$ ok`\n';
+    const scan = scanMarkdown(src);
     assert.equal(scan.unclosedFence, false);
     assert.equal(scan.math.length, 2);
     assert.equal(scan.math[0].tex, 'a+b');
     assert.equal(scan.math[0].display, false);
+    assert.equal(src.slice(scan.math[0].start, scan.math[0].end), '$a+b$');
     assert.equal(scan.math[1].display, true);
     assert.match(scan.math[1].tex, /c/);
   });
@@ -112,5 +112,11 @@ describe('markdown scan', () => {
     const r = validate(tinyIr('malo $\\notacomando{'));
     assert.equal(r.ok, false);
     assert.ok(r.errors.some((e) => e.code === 'math'));
+  });
+
+  it('assets/<dir>/file.png es asset-type', () => {
+    const r = validate(tinyIr('![x](assets/dir/x.png)'));
+    assert.equal(r.ok, false);
+    assert.ok(r.errors.some((e) => e.code === 'asset-type'));
   });
 });

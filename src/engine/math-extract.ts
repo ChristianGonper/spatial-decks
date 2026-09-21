@@ -1,5 +1,14 @@
-export type MathSpan = { tex: string; display: boolean };
+export type MathSpan = {
+  tex: string;
+  display: boolean;
+  start: number;
+  end: number;
+};
 export type MdImage = { alt: string; src: string };
+
+export function mathPlaceholder(i: number): string {
+  return `@@MATH${i}@@`;
+}
 
 export type ScanResult = {
   math: MathSpan[];
@@ -99,10 +108,15 @@ export function scanMarkdown(source: string): ScanResult {
         j++;
       }
       if (close === -1) {
-        math.push({ tex: text.slice(start), display });
+        math.push({ tex: text.slice(start), display, start: i, end: n });
         break;
       }
-      math.push({ tex: text.slice(start, close), display });
+      math.push({
+        tex: text.slice(start, close),
+        display,
+        start: i,
+        end: close + delim.length,
+      });
       i = close + delim.length;
       continue;
     }
@@ -110,4 +124,15 @@ export function scanMarkdown(source: string): ScanResult {
   }
 
   return { math, images, unclosedFence, html };
+}
+
+/** Sustituye `$`/`$$` por placeholders para que markdown-it no los interprete. */
+export function protectMath(source: string): { md: string; math: MathSpan[] } {
+  const text = normalizeNewlines(source);
+  const { math } = scanMarkdown(text);
+  let md = text;
+  for (let i = math.length - 1; i >= 0; i--) {
+    md = md.slice(0, math[i].start) + mathPlaceholder(i) + md.slice(math[i].end);
+  }
+  return { md, math };
 }

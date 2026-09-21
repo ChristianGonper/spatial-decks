@@ -290,11 +290,11 @@ html.is-presenting:not(.is-export) .viewport {
   color: #7a7168;
 }
 
-.katex {
+.frame-body .katex {
   color: var(--tinta);
 }
 
-.katex-display {
+.frame-body .katex-display {
   overflow: visible;
   margin: 0.75em 0;
 }
