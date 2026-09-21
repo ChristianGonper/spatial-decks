@@ -1,0 +1,31 @@
+---
+import Base from '../../layouts/Base.astro';
+import Presenter from '../../components/Presenter.astro';
+import { loadDeck, loadAllDecks, deckDir } from '../../engine/load';
+import { renderFrameHtml } from '../../engine/markdown';
+
+export function getStaticPaths() {
+  return loadAllDecks().map((d) => ({ params: { slug: d.slug } }));
+}
+
+const { slug } = Astro.params;
+if (!slug) throw new Error('slug requerido');
+const ir = loadDeck(deckDir(slug));
+const boot = {
+  slug: ir.slug,
+  root: ir.root,
+  path: ir.path,
+  camera: ir.camera,
+  video: ir.video,
+  frames: Object.values(ir.frames).map((f) => ({
+    id: f.id,
+    layout: f.layout,
+    children: f.children,
+    geometry: f.geometry ?? null,
+    html: renderFrameHtml(f.markdown, ir.slug),
+  })),
+};
+---
+<Base title={ir.title} lang={ir.lang} presenting>
+  <Presenter boot={boot} />
+</Base>

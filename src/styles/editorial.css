@@ -196,9 +196,26 @@ html.is-export .present-chrome {
   display: none;
 }
 
+html.is-presenting .pie {
+  display: none;
+}
+
+html.is-presenting main {
+  padding: 0;
+}
+
+html.is-presenting:not(.is-export) .viewport {
+  overflow: auto;
+}
+
 .world {
   position: relative;
   transform-origin: 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.25rem var(--medida);
+  padding-bottom: calc(var(--chrome-h) + 1rem);
 }
 
 .world.is-pending {
@@ -221,6 +238,65 @@ html.is-export .present-chrome {
   font: 18px/1.45 var(--serif);
   color: var(--tinta);
   max-width: none;
+  padding: 20px 24px;
+}
+
+.frame-body h1,
+.frame-body h2,
+.frame-body h3 {
+  font-weight: 400;
+  margin: 0 0 0.65em;
+}
+
+.frame-body p,
+.frame-body ul {
+  margin: 0 0 0.75em;
+}
+
+.frame-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.frame-body pre {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  background: var(--papel);
+  border: var(--regla) solid var(--filete);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.frame-body .hljs {
+  color: var(--tinta);
+  background: transparent;
+}
+
+.frame-body .hljs-keyword,
+.frame-body .hljs-built_in {
+  color: var(--borgoña);
+}
+
+.frame-body .hljs-string {
+  color: #3d5a3d;
+}
+
+.frame-body .hljs-number {
+  color: #5a3d1a;
+}
+
+.frame-body .hljs-comment {
+  color: #7a7168;
+}
+
+.katex {
+  color: var(--tinta);
+}
+
+.katex-display {
+  overflow: visible;
+  margin: 0.75em 0;
 }
 
 .frame-body.measuring {

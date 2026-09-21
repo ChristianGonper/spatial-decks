@@ -1,0 +1,54 @@
+---
+import 'katex/dist/katex.min.css';
+
+type FrameBoot = {
+  id: string;
+  layout: string;
+  children: string[];
+  geometry: unknown;
+  html: string;
+};
+
+type Boot = {
+  slug: string;
+  root: string;
+  path: unknown;
+  camera: unknown;
+  video: unknown;
+  frames: FrameBoot[];
+};
+
+interface Props {
+  boot: Boot;
+}
+
+const { boot } = Astro.props;
+const bootJson = JSON.stringify(boot).replace(/</g, '\\u003c');
+---
+<div class="viewport">
+  <div class="world" id="world">
+    {
+      boot.frames.map((f) => (
+        <article class="frame" data-id={f.id}>
+          <div class="frame-body" data-frame-body data-id={f.id} set:html={f.html} />
+        </article>
+      ))
+    }
+  </div>
+</div>
+<nav class="present-chrome" aria-label="Presentación">
+  <button type="button" data-act="prev">Anterior</button>
+  <button type="button" data-act="next">Siguiente</button>
+  <button type="button" data-act="overview">Overview</button>
+</nav>
+<script type="application/json" id="prezi-boot" set:html={bootJson}></script>
+<script>
+  const raw = document.getElementById('prezi-boot')?.textContent ?? '{}';
+  const boot = JSON.parse(raw);
+  for (const f of boot.frames ?? []) {
+    const el = document.querySelector(
+      '[data-frame-body][data-id="' + CSS.escape(f.id) + '"]',
+    );
+    if (el && typeof f.html === 'string') el.innerHTML = f.html;
+  }
+</script>

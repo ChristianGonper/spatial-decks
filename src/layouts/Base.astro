@@ -5,12 +5,13 @@ import Masthead from '../components/Masthead.astro';
 interface Props {
   title?: string;
   lang?: string;
+  presenting?: boolean;
 }
-const { title, lang = 'es' } = Astro.props;
+const { title, lang = 'es', presenting = false } = Astro.props;
 const docTitle = title ? `${title} — prezi-slides` : 'prezi-slides';
 ---
 <!doctype html>
-<html lang={lang}>
+<html lang={lang} class:list={[{ 'is-presenting': presenting }]}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
