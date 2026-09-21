@@ -118,9 +118,18 @@ main h1 {
   margin: 0 0 0.85rem;
 }
 
-.prosa p {
+.prosa p,
+.prosa ul {
   max-inline-size: var(--max-linea);
   margin-block: 0 1rem;
+}
+
+.prosa ul {
+  padding-inline-start: 1.2rem;
+}
+
+.prosa li {
+  margin-block: 0 0.4rem;
 }
 
 .prosa code,

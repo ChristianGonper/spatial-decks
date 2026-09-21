@@ -73,8 +73,23 @@ describe('golden-tiny', () => {
     assert.equal(ir.path.length, 4);
     assert.equal(ir.path[3].duration_ms, 800);
     const all = loadAllDecks(join(repoRoot, 'decks'));
-    assert.equal(all.length, 1);
-    assert.equal(all[0].slug, 'golden-tiny');
+    const slugs = all.map((d) => d.slug).sort();
+    assert.deepEqual(slugs, ['golden-tiny', 'quasi-geostrofica']);
+  });
+});
+
+describe('quasi-geostrofica', () => {
+  it('valida ok', () => {
+    const ir = loadDeck(join(repoRoot, 'decks/quasi-geostrofica'));
+    const result = validate(ir);
+    assert.equal(
+      result.ok,
+      true,
+      result.errors.map((e) => `${e.code}: ${e.message}`).join('; '),
+    );
+    assert.ok(Object.keys(ir.frames).length >= 15);
+    assert.equal(ir.path[0]?.id, 'root');
+    assert.equal(ir.path.at(-1)?.id, 'root');
   });
 });
 

@@ -11,6 +11,46 @@ working copy rsync en ext4:
 `npm install` en este directorio. No uses `cp -a` en lugar de rsync.
 Puerto **4322** (revista-laboratorio usa 4321).
 
+## Contrato de agente
+
+No hay MCP ni `add-frame`. El agente (o un humano) edita archivos y
+corre comandos. Superficie v1:
+
+| Pieza | Dónde |
+| --- | --- |
+| Schema | `schema/deck.schema.json` (JSON Schema Draft 2020-12, `$comment: version 1`) |
+| Validador | `run.sh validate [slug]` — Ajv2020 + chequeos semánticos; exit ≠ 0 si falla |
+| Ejemplo | `decks/golden-tiny/` (fixture) y `decks/quasi-geostrofica/` (clase) |
+| `dev` | visor con HMR (vía rsync a ext4) |
+| `build` | HTML estático en `$ROOT/dist` |
+| `preview` | sirve ese `dist/` (no un `dist/` del checkout FUSE) |
+| `video` | MP4 flythrough del path (mismo DOM del presentador) |
+
+### Formato en disco
+
+```
+decks/<slug>/
+  deck.yaml
+  frames/<id>.md    # id ≡ basename, sin .md
+  assets/<file>.png|svg
+```
+
+`deck.yaml` exige `slug`, `title`, `root`, `path`. Opcional: `lang`
+(`es`\|`en`), `theme` (`editorial`), `camera.duration_ms` (default 1000),
+`video.hold_ms` (default 3000). Path: lista de ids o `{id, duration_ms}`.
+Frontmatter de frame: `id` obligatorio; `layout` ∈ `grid`\|`row`\|`column`
+(default `grid`); `children`; `geometry` parcial `{x,y,width,height}`.
+
+Markdown: títulos, texto, listas, código, imagen local
+`![alt](assets/foo.svg)`. Math: `$...$` y `$$...$$` (KaTeX en Node).
+Un YAML monolítico se rechaza. Árbol solo con `children` del padre.
+
+`validate` recorre `decks/*/deck.yaml` (o un slug). Rechaza al menos:
+ID duplicado, path a un id inexistente, imagen referenciada ausente,
+`layout` que no es `grid|row|column`. También: `id` ≠ basename, asset
+remoto o fuera de `assets/<archivo>`, HTML crudo, fence sin cerrar, TeX
+inválido.
+
 ## Primera vez
 
 Node 24 de Termux y `rsync` (paquete `rsync` en termux-main, no rclone):
@@ -39,17 +79,18 @@ bash ~/work/projects/prezi-slides/run.sh test
 bash ~/work/projects/prezi-slides/run.sh sync
 ```
 
-`validate` (Ajv2020 + chequeos semánticos) recorre `decks/*/deck.yaml`.
-El schema está en `schema/deck.schema.json`. Fixture de prueba:
-`decks/golden-tiny/`.
-
-
-`run.sh preview` sirve `$ROOT/dist`, no un `dist/` del checkout git.
-
 En el navegador de la tablet: `http://<IP-wlan0>:4322`. IP:
 `ifconfig wlan0` o `ip -4 addr`. El proceso debe seguir vivo en Termux.
 
-Rutas v1: `/` (índice), `/d/<slug>` (presentador), `/acerca`.
+Rutas v1: `/` (índice, `loadAllDecks()`), `/d/<slug>` (presentador),
+`/acerca`. El índice lista `golden-tiny` y `quasi-geostrofica`.
+
+## Preview estático
+
+`run.sh build` escribe el presentador en `$ROOT/dist` (Astro static).
+`run.sh preview` sirve **ese** `dist/`, no un directorio del checkout
+git. No es `file://`: hace falta HTTP para assets y KaTeX. Tras un
+cambio de deck, vuelve a `build` antes de `preview`.
 
 ## Vídeo (`run.sh video`)
 
@@ -59,10 +100,12 @@ ffmpeg `libx264`). No hay estimador: hace falta `measures.json` del visor.
 ```bash
 bash ~/work/projects/prezi-slides/run.sh video --smoke golden-tiny
 bash ~/work/projects/prezi-slides/run.sh video golden-tiny
+bash ~/work/projects/prezi-slides/run.sh video quasi-geostrofica
 ```
 
 **Dejar Chrome en primer plano** hasta que el CLI imprima la ruta del MP4.
-Android pausa `toPng` si la pestaña queda en segundo plano.
+Android pausa `toPng` si la pestaña queda en segundo plano. Si Chrome no
+POST a `/__prezi/done`, **no hay MP4**: no se fabrica un archivo a mano.
 
 Salida (en ROOT, `$HOME/.node-projects/prezi-slides/output/`):
 

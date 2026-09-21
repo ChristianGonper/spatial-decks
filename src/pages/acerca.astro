@@ -11,6 +11,22 @@ import Base from '../layouts/Base.astro';
       La fuente de verdad es texto en git. La UI no escribe coordenadas.
     </p>
     <p>
+      Contrato de agente: schema en
+      <code>schema/deck.schema.json</code>, validador CLI y dos decks
+      de ejemplo. No hay MCP ni editor visual. Se editan archivos y se
+      corre <code>run.sh validate</code>.
+    </p>
+    <ul>
+      <li><code>run.sh validate [slug]</code> — Ajv2020 + semántica</li>
+      <li><code>run.sh dev</code> — visor en <code>:4322</code></li>
+      <li><code>run.sh build</code> y <code>preview</code> — HTML estático</li>
+      <li><code>run.sh video [slug]</code> — MP4; Chrome en primer plano</li>
+    </ul>
+    <p>
+      Un tema editorial (papel crema, tinta, borgoña). Math con KaTeX en
+      el build. El índice sale de <code>loadAllDecks()</code>.
+    </p>
+    <p>
       Código: <code>~/work/projects/prezi-slides/</code>
     </p>
   </div>
