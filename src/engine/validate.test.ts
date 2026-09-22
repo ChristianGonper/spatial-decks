@@ -83,7 +83,7 @@ describe('golden-tiny', () => {
     assert.equal(ir.path[3].duration_ms, 800);
     const all = loadAllDecks(join(repoRoot, 'decks'));
     const slugs = all.map((d) => d.slug).sort();
-    assert.deepEqual(slugs, ['golden-tiny', 'quasi-geostrofica']);
+    assert.deepEqual(slugs, ['golden-tiny', 'quasi-geostrofica', 'ramas-demo']);
   });
 });
 

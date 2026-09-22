@@ -520,6 +520,10 @@ Imágenes: solo `assets/` o `./assets/`, `.png`/`.svg`. URL pública `/deck-asse
 
 ## Algoritmo de layout
 
+Extensión `hub`: `layoutScene(ir, measures)` devuelve `groups` (AABB de toda la rama, para Overview y el punto intermedio del vuelo) y `cards` (AABB de la tarjeta legible del frame, para los pasos del path). `layoutTree` sigue devolviendo los AABB de grupos como antes. Las direcciones opcionales de las hijas son `top`, `right`, `bottom`, `left`, con asignación determinista por índice. El empaquetado reserva una banda superior e inferior y una zona media para laterales y tarjeta; en cada lado admite varias ramas y verifica solapes entre cajas y tarjeta. Se mide el contenido real y se añade el padding de la tarjeta. Las ramas internas se miden antes de asignar espacio al padre.
+
+`transition: via-group` en el paso de destino encuadra el ancestro común de origen y destino a mitad de la duración y termina en la tarjeta de destino. `flightCameras` y `cameraOnFlight` se comparten entre el visor y la captura, incluido el easing de cada tramo; al retroceder se reutiliza la transición declarada por el paso del que se vuelve.
+
 Puro: `layoutTree(ir: DeckIR, measures: Record<string, Size>): LayoutMap`.
 
 `measures[id]` = tamaño intrínseco del **cuerpo** ya maquetado (sin padding de frame, sin hijos), con el protocolo de abajo.

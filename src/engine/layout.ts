@@ -1,5 +1,5 @@
 import { debugLayout } from './debug.ts';
-import type { DeckIR, FrameIR, Geometry, LayoutMap, Rect, Size } from './types.ts';
+import type { DeckIR, Direction, FrameIR, Geometry, LayoutMap, Rect, Size } from './types.ts';
 
 export const CONTENT_MAX_WIDTH = 440;
 export const FRAME_PAD_X = 24;
@@ -120,6 +120,41 @@ export function packSiblings(
 
 type Placed = { id: string; x: number; y: number; width: number; height: number };
 
+const DIRECTIONS: Direction[] = ['top', 'right', 'bottom', 'left'];
+
+/** Reserva bandas separadas: arriba/abajo nunca invaden los laterales. */
+function packHub(ids: string[], boxes: Size[], card: Size, ir: DeckIR): {
+  slots: Array<{ x: number; y: number }>;
+  card: { x: number; y: number };
+} {
+  const groups = new Map<Direction, number[]>(DIRECTIONS.map((d) => [d, []]));
+  ids.forEach((id, i) => groups.get(getFrame(ir, id).direction ?? DIRECTIONS[i % 4])!.push(i));
+  const width = (indices: number[]) => indices.reduce((a, i) => a + boxes[i].width, 0) + Math.max(0, indices.length - 1) * FRAME_GAP;
+  const height = (indices: number[]) => indices.reduce((a, i) => a + boxes[i].height, 0) + Math.max(0, indices.length - 1) * FRAME_GAP;
+  const top = groups.get('top')!;
+  const bottom = groups.get('bottom')!;
+  const left = groups.get('left')!;
+  const right = groups.get('right')!;
+  const leftW = Math.max(0, ...left.map((i) => boxes[i].width));
+  const rightW = Math.max(0, ...right.map((i) => boxes[i].width));
+  const midH = Math.max(card.height, height(left), height(right));
+  const topW = width(top);
+  const bottomW = width(bottom);
+  const cardX = Math.max(left.length ? leftW + FRAME_GAP : 0, (Math.max(topW, bottomW) - card.width) / 2, 0);
+  const midY = (top.length ? Math.max(...top.map((i) => boxes[i].height)) + FRAME_GAP : 0);
+  const cardY = midY + (midH - card.height) / 2;
+  const slots = boxes.map(() => ({ x: 0, y: 0 }));
+  for (const [indices, y] of [[top, 0], [bottom, midY + midH + FRAME_GAP]] as const) {
+    let x = cardX + card.width / 2 - width(indices) / 2;
+    for (const i of indices) { slots[i] = { x, y }; x += boxes[i].width + FRAME_GAP; }
+  }
+  for (const [indices, x] of [[left, cardX - FRAME_GAP - leftW], [right, cardX + card.width + FRAME_GAP]] as const) {
+    let y = midY + (midH - height(indices)) / 2;
+    for (const i of indices) { slots[i] = { x, y }; y += boxes[i].height + FRAME_GAP; }
+  }
+  return { slots, card: { x: cardX, y: cardY } };
+}
+
 function bodyOf(measures: Record<string, Size>, id: string): Size {
   const m = measures[id];
   if (m && typeof m.width === 'number' && typeof m.height === 'number') return m;
@@ -133,6 +168,7 @@ function layoutFrame(
   locals: Map<string, Placed>,
   sizes: Map<string, Size>,
   bodies: Map<string, Size>,
+  cards: Map<string, Rect>,
 ): Size {
   const frame = getFrame(ir, id);
   const geo = geoOf(frame);
@@ -141,7 +177,7 @@ function layoutFrame(
 
   const childBoxes: Size[] = [];
   for (const childId of frame.children) {
-    const sub = layoutFrame(ir, measures, childId, locals, sizes, bodies);
+    const sub = layoutFrame(ir, measures, childId, locals, sizes, bodies, cards);
     const cg = geoOf(getFrame(ir, childId));
     childBoxes.push({
       width: hasNum(cg, 'width') ? cg.width! : sub.width,
@@ -149,7 +185,11 @@ function layoutFrame(
     });
   }
 
-  const slots = packSiblings(childBoxes, frame.layout);
+  const cardSize = { width: body.width + 2 * FRAME_PAD_X, height: body.height + 2 * FRAME_PAD_Y };
+  const hub = frame.layout === 'hub' && frame.children.length > 0
+    ? packHub(frame.children, childBoxes, cardSize, ir) : null;
+  const slots = hub?.slots ?? packSiblings(childBoxes, frame.layout);
+  cards.set(id, { x: hub?.card.x ?? 0, y: hub?.card.y ?? 0, ...cardSize });
   const placed: Placed[] = [];
   for (let i = 0; i < frame.children.length; i++) {
     const childId = frame.children[i];
@@ -186,17 +226,25 @@ function layoutFrame(
       }
     }
   }
+  if (hub) {
+    const center = { x: hub.card.x, y: hub.card.y, ...cardSize };
+    for (const p of placed) {
+      if (boxesOverlap(center, p)) {
+        throw new LayoutError('overlap', `${p.id} solapa tarjeta central de ${id}`);
+      }
+    }
+  }
 
-  let areaW = 0;
-  let areaH = 0;
+  let areaW = hub ? hub.card.x + cardSize.width : 0;
+  let areaH = hub ? hub.card.y + cardSize.height : 0;
   for (const p of placed) {
     areaW = Math.max(areaW, p.x + p.width);
     areaH = Math.max(areaH, p.y + p.height);
   }
 
   const n = frame.children.length;
-  const innerW = Math.max(body.width, areaW);
-  const innerH = body.height + (n > 0 ? PARENT_BODY_GAP + areaH : 0);
+  const innerW = hub ? areaW : Math.max(body.width, areaW);
+  const innerH = hub ? areaH : body.height + (n > 0 ? PARENT_BODY_GAP + areaH : 0);
   const outerW = hasNum(geo, 'width') ? geo.width! : innerW + 2 * FRAME_PAD_X;
   const outerH = hasNum(geo, 'height') ? geo.height! : innerH + 2 * FRAME_PAD_Y;
   const size = { width: outerW, height: outerH };
@@ -213,32 +261,51 @@ function placeWorld(
   sizes: Map<string, Size>,
   bodies: Map<string, Size>,
   out: LayoutMap,
+  cardOut: LayoutMap,
+  cards: Map<string, Rect>,
 ): void {
   const size = sizes.get(id) ?? { width: 0, height: 0 };
   const rect: Rect = { x: worldX, y: worldY, width: size.width, height: size.height };
   out[id] = rect;
+  const card = cards.get(id)!;
+  cardOut[id] = frameCardRect(ir, id, worldX, worldY, card, size, bodies);
   const frame = getFrame(ir, id);
   if (frame.id !== id) out[frame.id] = rect;
 
   const n = frame.children.length;
   const body = bodies.get(id) ?? { width: 0, height: 0 };
   const ox = worldX + FRAME_PAD_X;
-  const oy = worldY + FRAME_PAD_Y + body.height + (n > 0 ? PARENT_BODY_GAP : 0);
+  const oy = worldY + FRAME_PAD_Y + (frame.layout === 'hub' && n > 0 ? 0 : body.height + (n > 0 ? PARENT_BODY_GAP : 0));
   for (const childId of frame.children) {
     const loc = locals.get(childId);
     if (!loc) continue;
-    placeWorld(ir, childId, ox + loc.x, oy + loc.y, locals, sizes, bodies, out);
+    placeWorld(ir, childId, ox + loc.x, oy + loc.y, locals, sizes, bodies, out, cardOut, cards);
   }
 }
 
+function frameCardRect(ir: DeckIR, id: string, x: number, y: number, card: Rect, size: Size, bodies: Map<string, Size>): Rect {
+  const frame = getFrame(ir, id);
+  if (!frame.children.length) return { x, y, ...size };
+  if (frame.layout === 'hub') return { x: x + FRAME_PAD_X + card.x, y: y + FRAME_PAD_Y + card.y, width: card.width, height: card.height };
+  const body = bodies.get(id)!;
+  // El layout anterior reserva 16 px entre cuerpo e hijos; la tarjeta acaba 4 px antes.
+  return { x, y, width: body.width + 2 * FRAME_PAD_X, height: body.height + FRAME_PAD_Y + 12 };
+}
+
 export function layoutTree(ir: DeckIR, measures: Record<string, Size>): LayoutMap {
+  return layoutScene(ir, measures).groups;
+}
+
+export function layoutScene(ir: DeckIR, measures: Record<string, Size>): { groups: LayoutMap; cards: LayoutMap } {
   const locals = new Map<string, Placed>();
   const sizes = new Map<string, Size>();
   const bodies = new Map<string, Size>();
-  layoutFrame(ir, measures, ir.root, locals, sizes, bodies);
+  const cards = new Map<string, Rect>();
+  layoutFrame(ir, measures, ir.root, locals, sizes, bodies, cards);
   const out: LayoutMap = {};
+  const cardOut: LayoutMap = {};
   // root ignora geometry.x/y
-  placeWorld(ir, ir.root, 0, 0, locals, sizes, bodies, out);
+  placeWorld(ir, ir.root, 0, 0, locals, sizes, bodies, out, cardOut, cards);
   debugLayout('layoutTree', ir.slug, Object.keys(out).length);
-  return out;
+  return { groups: out, cards: cardOut };
 }

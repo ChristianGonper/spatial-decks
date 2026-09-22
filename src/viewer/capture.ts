@@ -1,12 +1,7 @@
 import { toPng } from 'html-to-image';
-import {
-  easeInOutCubic,
-  fitCamera,
-  lerpCam,
-  worldTransform,
-  type Camera,
-} from '../engine/camera.ts';
-import type { LayoutMap, PathStep } from '../engine/types.ts';
+import { fitCamera, worldTransform, type Camera } from '../engine/camera.ts';
+import { cameraOnFlight, flightCameras } from '../engine/flight.ts';
+import type { DeckIR, LayoutMap, PathStep } from '../engine/types.ts';
 
 export const EXPORT_WIDTH = 1280;
 export const EXPORT_HEIGHT = 800;
@@ -19,7 +14,8 @@ export type CaptureOpts = {
   root: string;
   holdMs: number;
   defaultDurationMs: number;
-  layout: LayoutMap;
+  scene: { groups: LayoutMap; cards: LayoutMap };
+  ir: DeckIR;
   worldEl: HTMLElement;
   viewportEl: HTMLElement;
   smokeOnly: boolean;
@@ -77,7 +73,7 @@ function setProgress(msg: string): void {
 export async function runCapture(opts: CaptureOpts): Promise<void> {
   document.documentElement.classList.add('is-export');
   const steps = stepsOf(opts.path, opts.root);
-  const { worldEl, viewportEl, layout, root } = opts;
+  const { worldEl, viewportEl, scene, root } = opts;
   let unique = 0;
 
   function applyCamera(cam: Camera): void {
@@ -93,7 +89,7 @@ export async function runCapture(opts: CaptureOpts): Promise<void> {
   const holdN = Math.max(1, framesForMs(opts.holdMs));
   setProgress('export: hold 0');
   opts.setActive(steps[0].id);
-  applyCamera(fitCamera(rectFor(layout, steps[0].id, root), VP));
+  applyCamera(fitCamera(rectFor(scene.cards, steps[0].id, root), VP));
   const png0 = await snap();
   await postJson('/__prezi/smoke', { png: png0 });
 
@@ -107,12 +103,12 @@ export async function runCapture(opts: CaptureOpts): Promise<void> {
 
   for (let i = 1; i < steps.length; i++) {
     const nFlight = framesForMs(steps[i].duration_ms ?? opts.defaultDurationMs);
-    const cam0 = fitCamera(rectFor(layout, steps[i - 1].id, root), VP);
-    const cam1 = fitCamera(rectFor(layout, steps[i].id, root), VP);
+    const cameras = flightCameras(opts.ir, scene.cards, scene.groups, steps[i - 1].id, steps[i], VP);
+    const cam1 = cameras[cameras.length - 1];
     opts.setActive(steps[i].id);
     setProgress(`export: vuelo ${i - 1}→${i}`);
     for (let k = 1; k <= nFlight; k++) {
-      applyCamera(lerpCam(cam0, cam1, easeInOutCubic(k / nFlight)));
+      applyCamera(cameraOnFlight(cameras, k / nFlight));
       await postFrame(await snap(), 1);
     }
     applyCamera(cam1);

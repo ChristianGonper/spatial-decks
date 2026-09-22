@@ -14,7 +14,9 @@ Un **frame** es un recuadro con título, texto, listas, código, fórmulas (LaTe
 
 El **path** es la charla: una lista de ids. Puede visitar un padre (overview de un capítulo) y luego sus hojas. Siguiente / anterior recorren ese camino. Overview salta al root y vuelve.
 
-El **layout** no se arrastra a mano. El árbol declara `grid`, `row` o `column`; el motor coloca los recuadros. No hay rotación.
+El **layout** no se arrastra a mano. El árbol declara `grid`, `row`, `column` o `hub`; el motor coloca los recuadros. En `hub`, la tarjeta del padre queda en el centro y las ramas pueden indicar `direction: top|right|bottom|left` en su frontmatter; sin dirección se distribuyen por orden. No hay rotación.
+
+El encuadre de un paso del recorrido muestra la **tarjeta** de ese frame; Overview muestra el grupo completo. Un paso `{id: destino, transition: via-group}` pasa por el grupo común antes de acercarse al destino en un solo avance. `direct` (valor por defecto) conserva el vuelo anterior. Ejemplo: [`decks/ramas-demo/`](decks/ramas-demo/).
 
 Look: un tema editorial (papel crema, tinta, borgoña), no un dashboard oscuro.
 

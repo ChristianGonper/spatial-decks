@@ -261,6 +261,27 @@ html.is-presenting main {
   border-width: 1.5px;
 }
 
+.frame.has-children {
+  background: transparent;
+  padding: 0;
+}
+
+.frame.has-children .frame-body {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--filete);
+  background: var(--pane);
+  padding: 20px 24px 12px;
+}
+
+.frame.has-children[data-layout='hub'] .frame-body {
+  padding-bottom: 20px;
+}
+
+.frame.has-children.is-active .frame-body {
+  border-color: var(--borgoña);
+}
+
 .frame-body {
   font: 18px/1.45 var(--serif);
   color: var(--tinta);

@@ -40,6 +40,7 @@ const boot = {
     return {
       id: f.id,
       layout: f.layout,
+      direction: f.direction,
       children: f.children,
       geometry: f.geometry ?? null,
       html: renderFrameHtml(f.markdown, ir.slug),

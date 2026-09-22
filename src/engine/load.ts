@@ -64,6 +64,7 @@ function normalizePath(raw: unknown): PathStep[] {
     if (isPlainObject(item) && typeof item.id === 'string') {
       const step: PathStep = { id: item.id };
       if (typeof item.duration_ms === 'number') step.duration_ms = item.duration_ms;
+      if (item.transition === 'via-group' || item.transition === 'direct') step.transition = item.transition;
       out.push(step);
     }
   }
@@ -93,6 +94,7 @@ function loadFrameFile(abs: string): FrameIR {
     id,
     layout,
     children,
+    direction: typeof fm.direction === 'string' ? fm.direction as FrameIR['direction'] : undefined,
     markdown: body,
     raw: fm,
   };

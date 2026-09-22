@@ -4,6 +4,7 @@ import 'katex/dist/katex.min.css';
 type FrameBoot = {
   id: string;
   layout: string;
+  direction?: string;
   children: string[];
   geometry: unknown;
   html: string;
@@ -29,7 +30,7 @@ const bootJson = JSON.stringify(boot).replace(/</g, '\\u003c');
   <div class="world is-pending" id="world">
     {
       boot.frames.map((f) => (
-        <article class="frame" data-id={f.id}>
+        <article class="frame" data-id={f.id} data-layout={f.layout}>
           <div class="frame-body" data-frame-body data-id={f.id} set:html={f.html} />
         </article>
       ))

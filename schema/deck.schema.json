@@ -26,7 +26,8 @@
           "required": ["id"],
           "properties": {
             "id": { "$ref": "#/$defs/Id" },
-            "duration_ms": { "type": "integer", "minimum": 1 }
+            "duration_ms": { "type": "integer", "minimum": 1 },
+            "transition": { "type": "string", "enum": ["direct", "via-group"] }
           }
         }
       ]
@@ -37,7 +38,8 @@
       "required": ["id"],
       "properties": {
         "id": { "$ref": "#/$defs/Id" },
-        "layout": { "type": "string", "enum": ["grid", "row", "column"] },
+        "layout": { "type": "string", "enum": ["grid", "row", "column", "hub"] },
+        "direction": { "type": "string", "enum": ["top", "right", "bottom", "left"] },
         "children": {
           "type": "array",
           "items": { "$ref": "#/$defs/Id" }

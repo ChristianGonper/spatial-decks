@@ -1,0 +1,22 @@
+slug: ramas-demo
+title: Una idea y sus ramas
+lang: es
+theme: editorial
+root: centro
+camera:
+  duration_ms: 1000
+video:
+  hold_ms: 2000
+path:
+  - centro
+  - id: contexto
+  - id: detalle
+    transition: via-group
+  - id: centro
+    transition: via-group
+  - id: metodo
+    transition: via-group
+  - id: evidencia
+    transition: via-group
+  - id: conclusion
+    transition: via-group

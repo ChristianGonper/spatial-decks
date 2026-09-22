@@ -5,6 +5,8 @@ import {
   FRAME_PAD_Y,
   LayoutError,
   layoutTree,
+  layoutScene,
+  boxesOverlap,
   packSiblings,
   PARENT_BODY_GAP,
 } from './layout.ts';
@@ -16,6 +18,7 @@ function frame(
     layout?: string;
     children?: string[];
     geometry?: Geometry;
+    direction?: FrameIR['direction'];
   } = {},
 ): FrameIR {
   const f: FrameIR = {
@@ -24,6 +27,7 @@ function frame(
     children: opts.children ?? [],
     markdown: '',
     raw: { id },
+    direction: opts.direction,
   };
   if (opts.geometry) f.geometry = opts.geometry;
   return f;
@@ -132,6 +136,40 @@ describe('packSiblings', () => {
 });
 
 describe('layoutTree', () => {
+  it('hub separa tarjeta central y cuatro ramas, incluida una anidada', () => {
+    const ir = irOf({
+      root: frame('root', { layout: 'hub', children: ['north', 'east', 'south', 'west'] }),
+      north: frame('north', { direction: 'top', children: ['nested'] }),
+      nested: frame('nested'),
+      east: frame('east', { direction: 'right' }),
+      south: frame('south', { direction: 'bottom' }),
+      west: frame('west', { direction: 'left' }),
+    });
+    const measures = Object.fromEntries(Object.keys(ir.frames).map((id) => [id, { width: 140, height: 90 }]));
+    const { groups, cards } = layoutScene(ir, measures);
+    assert.ok(cards.root.width < groups.root.width);
+    assert.ok(cards.root.height < groups.root.height);
+    assert.ok(groups.north.y + groups.north.height < cards.root.y);
+    assert.ok(groups.south.y > cards.root.y + cards.root.height);
+    assert.ok(groups.west.x + groups.west.width < cards.root.x);
+    assert.ok(groups.east.x > cards.root.x + cards.root.width);
+    for (const id of ['north', 'east', 'south', 'west']) assert.ok(!boxesOverlap(groups[id], cards.root));
+    assert.ok(groups.nested.y > cards.north.y);
+  });
+
+  it('hub agrupa varias ramas en el mismo lado sin solapes y asigna dirección por orden', () => {
+    const ir = irOf({
+      root: frame('root', { layout: 'hub', children: ['a', 'b', 'c', 'd', 'e'] }),
+      a: frame('a', { direction: 'right' }), b: frame('b', { direction: 'right' }),
+      c: frame('c'), d: frame('d'), e: frame('e'),
+    });
+    const measures = Object.fromEntries(Object.keys(ir.frames).map((id) => [id, { width: 100, height: 80 }]));
+    const { groups, cards } = layoutScene(ir, measures);
+    assert.deepEqual(layoutScene(ir, measures), { groups, cards });
+    for (const id of ['a', 'b', 'c', 'd', 'e']) for (const other of ['a', 'b', 'c', 'd', 'e']) {
+      if (id !== other) assert.ok(!boxesOverlap(groups[id], groups[other]), `${id} ${other}`);
+    }
+  });
   it('cuerpo 100×80 → outer 148×120; i=1 x local=188', () => {
     const ir = leavesGrid(2);
     const map = layoutTree(ir, leafMeasures(2));

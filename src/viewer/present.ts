@@ -1,12 +1,11 @@
 import {
   CAMERA_DURATION_MS,
-  easeInOutCubic,
   fitCamera,
-  lerpCam,
   worldTransform,
   type Camera,
 } from '../engine/camera.ts';
-import { layoutTree } from '../engine/layout.ts';
+import { cameraOnFlight, flightCameras } from '../engine/flight.ts';
+import { layoutScene } from '../engine/layout.ts';
 import type {
   DeckIR,
   FrameIR,
@@ -21,6 +20,7 @@ import { sizesDiffer, startMeasure } from './measure.ts';
 export type BootFrame = {
   id: string;
   layout: string;
+  direction?: FrameIR['direction'];
   children: string[];
   geometry: Geometry | null;
   html: string;
@@ -59,6 +59,7 @@ function normalizePath(raw: unknown): PathStep[] {
     if (isPlainObject(item) && typeof item.id === 'string') {
       const step: PathStep = { id: item.id };
       if (typeof item.duration_ms === 'number') step.duration_ms = item.duration_ms;
+      if (item.transition === 'via-group' || item.transition === 'direct') step.transition = item.transition;
       out.push(step);
     }
   }
@@ -72,6 +73,7 @@ function irFromBoot(boot: PresenterBoot): DeckIR {
       id: f.id,
       layout: f.layout,
       children: f.children,
+      direction: f.direction,
       markdown: '',
       raw: { id: f.id },
     };
@@ -138,14 +140,14 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
 
   const session = await startMeasure(boot.frames);
   let measures = session.measures;
-  let layout: LayoutMap = layoutTree(ir, measures);
-  applyBoxes(worldEl, boot.frames, layout, measures);
+  let scene = layoutScene(ir, measures);
+  applyBoxes(worldEl, boot.frames, scene, measures);
 
   const again = await session.remeasure();
   if (sizesDiffer(measures, again)) {
     measures = again;
-    layout = layoutTree(ir, measures);
-    applyBoxes(worldEl, boot.frames, layout, measures);
+    scene = layoutScene(ir, measures);
+    applyBoxes(worldEl, boot.frames, scene, measures);
   }
   session.dispose();
 
@@ -158,8 +160,8 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
   }
 
   function rectNow(): Rect {
-    if (overview || path.length === 0) return layout[boot.root];
-    return layout[path[i].id] ?? layout[boot.root];
+    if (overview || path.length === 0) return scene.groups[boot.root];
+    return scene.cards[path[i].id] ?? scene.groups[boot.root];
   }
 
   function applyCam(c: Camera): void {
@@ -174,21 +176,21 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
 
   let cam: Camera = fitNow();
 
-  function flyTo(target: Camera, durationMs: number): void {
+  function flyTo(cameras: Camera[], durationMs: number): void {
     if (rafId !== 0) {
       cancelAnimationFrame(rafId);
       rafId = 0;
     }
     if (durationMs <= 0) {
-      cam = target;
+      cam = cameras[cameras.length - 1];
       applyCam(cam);
       return;
     }
-    const from = cam;
+    cameras[0] = cam;
     const t0 = performance.now();
     const tick = (now: number) => {
       const t = Math.min(1, (now - t0) / durationMs);
-      cam = lerpCam(from, target, easeInOutCubic(t));
+      cam = cameraOnFlight(cameras, t);
       applyCam(cam);
       if (t < 1) rafId = requestAnimationFrame(tick);
       else rafId = 0;
@@ -231,13 +233,13 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
     }
   }
 
-  function show(opts: { instant?: boolean; durationMs?: number }): void {
+  function show(opts: { instant?: boolean; durationMs?: number; cameras?: Camera[] }): void {
     const target = fitCamera(rectNow(), vp());
     if (opts.instant) {
       cam = target;
       applyCam(cam);
     } else {
-      flyTo(target, opts.durationMs ?? defaultMs);
+      flyTo(opts.cameras ?? [cam, target], opts.durationMs ?? defaultMs);
     }
     syncActive();
     syncChrome();
@@ -247,16 +249,19 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
     if (path.length === 0 || i >= path.length - 1) return;
     const dest = i + 1;
     if (overview) overview = false;
+    const cameras = flightCameras(ir, scene.cards, scene.groups, path[i].id, path[dest], vp());
     i = dest;
-    show({ durationMs: durationTo(i) });
+    show({ durationMs: durationTo(i), cameras });
   }
 
   function goPrev(): void {
     if (path.length === 0 || i <= 0) return;
     const dest = i - 1;
     if (overview) overview = false;
+    const reverse: PathStep = { id: path[dest].id, transition: path[i].transition };
+    const cameras = flightCameras(ir, scene.cards, scene.groups, path[i].id, reverse, vp());
     i = dest;
-    show({ durationMs: durationTo(i) });
+    show({ durationMs: durationTo(i + 1), cameras });
   }
 
   function toggleOverview(): void {
@@ -279,7 +284,8 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
         root: boot.root,
         holdMs: ir.video.hold_ms,
         defaultDurationMs: defaultMs,
-        layout,
+        scene,
+        ir,
         worldEl,
         viewportEl,
         smokeOnly: exp === 'smoke',
@@ -338,7 +344,7 @@ export async function bootPresenter(boot: PresenterBoot): Promise<void> {
 function applyBoxes(
   worldEl: HTMLElement,
   frames: BootFrame[],
-  layout: LayoutMap,
+  scene: { groups: LayoutMap; cards: LayoutMap },
   measures: Record<string, Size>,
 ): void {
   for (const f of frames) {
@@ -346,7 +352,7 @@ function applyBoxes(
       ':scope > .frame[data-id="' + CSS.escape(f.id) + '"]',
     );
     if (!(article instanceof HTMLElement)) continue;
-    const r = layout[f.id];
+    const r = scene.groups[f.id];
     if (r) {
       article.style.left = r.x + 'px';
       article.style.top = r.y + 'px';
@@ -357,7 +363,14 @@ function applyBoxes(
     if (!(body instanceof HTMLElement)) continue;
     const m = measures[f.id];
     if (!m) continue;
-    body.style.width = m.width + 'px';
+    if (f.children.length) {
+      article.classList.add('has-children');
+      const card = scene.cards[f.id];
+      body.style.left = card.x - r.x + 'px';
+      body.style.top = card.y - r.y + 'px';
+      body.style.height = card.height + 'px';
+    }
+    body.style.width = f.children.length ? scene.cards[f.id].width + 'px' : m.width + 'px';
     body.style.maxWidth = 'none';
   }
 }

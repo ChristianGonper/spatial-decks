@@ -1,4 +1,5 @@
-export type LayoutMode = 'grid' | 'row' | 'column';
+export type LayoutMode = 'grid' | 'row' | 'column' | 'hub';
+export type Direction = 'top' | 'right' | 'bottom' | 'left';
 
 export type Geometry = {
   x?: number;
@@ -10,6 +11,7 @@ export type Geometry = {
 export type PathStep = {
   id: string;
   duration_ms?: number;
+  transition?: 'direct' | 'via-group';
 };
 
 export type FrameIR = {
@@ -17,6 +19,7 @@ export type FrameIR = {
   layout: LayoutMode | string;
   children: string[];
   geometry?: Geometry;
+  direction?: Direction;
   markdown: string;
   raw: Record<string, unknown>;
 };

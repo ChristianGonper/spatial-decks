@@ -9,7 +9,7 @@ import { scanMarkdown } from './math-extract.ts';
 import type { DeckIR, FrameIR, Issue, ValidationResult } from './types.ts';
 
 const ID_RE = /^[a-z][a-z0-9-]{0,63}$/;
-const LAYOUTS = new Set(['grid', 'row', 'column']);
+const LAYOUTS = new Set(['grid', 'row', 'column', 'hub']);
 const LANGS = new Set(['es', 'en']);
 
 const SCHEMA_PATH = join(
